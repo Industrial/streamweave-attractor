@@ -12,6 +12,8 @@ keywords = ["stream", "async", "pipeline", "attractor"]
 categories = ["asynchronous", "data-structures"]
 
 [dependencies]
+# Pin to fixed version for RUSTSEC-2026-0007 (BytesMut::reserve integer overflow)
+bytes = ">=1.11.1"
 streamweave = "0.9"
 tracing = "0.1"
 async-trait = "0.1"
@@ -24,6 +26,10 @@ name = "simple_pipeline"
 
 [[example]]
 name = "run_dot"
+
+[[bin]]
+name = "run_dot"
+path = "src/bin/run_dot.rs"
 
 [dev-dependencies]
 proptest = "1.5"
