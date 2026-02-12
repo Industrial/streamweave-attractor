@@ -9,6 +9,7 @@ mod check_goal_gates_test;
 mod create_checkpoint;
 #[cfg(test)]
 mod create_checkpoint_test;
+mod exec_node;
 mod execute_handler;
 #[cfg(test)]
 mod execute_handler_test;
@@ -18,26 +19,33 @@ mod execution_loop_test;
 mod find_start;
 #[cfg(test)]
 mod find_start_test;
+mod fix_node;
+mod identity_node;
 mod init_context;
 #[cfg(test)]
 mod init_context_test;
+mod outcome_router_node;
 mod parse_dot;
 #[cfg(test)]
 mod parse_dot_test;
 mod select_edge;
 #[cfg(test)]
 mod select_edge_test;
-mod validate_graph;
+pub(crate) mod validate_graph;
 #[cfg(test)]
 mod validate_graph_test;
 
 pub use apply_context_updates::ApplyContextUpdatesNode;
 pub use check_goal_gates::CheckGoalGatesNode;
 pub use create_checkpoint::CreateCheckpointNode;
+pub use exec_node::ExecNode;
 pub use execute_handler::ExecuteHandlerNode;
 pub use execution_loop::{AttractorExecutionLoopNode, AttractorResult};
 pub use find_start::FindStartNode;
+pub use fix_node::FixNode;
+pub use identity_node::IdentityNode;
 pub use init_context::InitContextNode;
+pub use outcome_router_node::OutcomeRouterNode;
 pub use parse_dot::ParseDotNode;
 pub use select_edge::SelectEdgeNode;
 pub use validate_graph::ValidateGraphNode;

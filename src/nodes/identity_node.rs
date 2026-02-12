@@ -1,45 +1,52 @@
-//! Fix node: stub that receives NodeOutcome and emits trigger for retry.
+//! Identity / pass-through node for compiled graph (start and exit placeholders).
 
 use async_trait::async_trait;
-use std::any::Any;
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
-use tokio::sync::mpsc;
-use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
 
-/// Stub fix node: forwards one trigger per input (for retry loop).
-pub struct FixNode {
+/// Pass-through node that forwards each input item to output unchanged.
+/// Used as placeholder for start and exit nodes in Phase 1 compiled graph.
+pub struct IdentityNode {
   name: String,
+  input_ports: Vec<String>,
+  output_ports: Vec<String>,
 }
 
-impl FixNode {
+impl IdentityNode {
   pub fn new(name: impl Into<String>) -> Self {
-    Self { name: name.into() }
+    Self {
+      name: name.into(),
+      input_ports: vec!["in".to_string()],
+      output_ports: vec!["out".to_string()],
+    }
   }
 }
 
 #[async_trait]
-impl Node for FixNode {
+impl Node for IdentityNode {
   fn name(&self) -> &str {
     &self.name
   }
+
   fn set_name(&mut self, name: &str) {
     self.name = name.to_string();
   }
+
   fn input_port_names(&self) -> &[String] {
-    static P: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
-    P.get_or_init(|| vec!["in".to_string()])
+    &self.input_ports
   }
+
   fn output_port_names(&self) -> &[String] {
-    static P: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
-    P.get_or_init(|| vec!["out".to_string()])
+    &self.output_ports
   }
+
   fn has_input_port(&self, name: &str) -> bool {
     name == "in"
   }
+
   fn has_output_port(&self, name: &str) -> bool {
     name == "out"
   }
@@ -51,19 +58,21 @@ impl Node for FixNode {
     Box<dyn std::future::Future<Output = Result<OutputStreams, NodeExecutionError>> + Send + '_>,
   > {
     Box::pin(async move {
-      let in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
-      let (tx, rx) = mpsc::channel(16);
+      let mut in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
+      let (out_tx, out_rx) = tokio::sync::mpsc::channel(16);
+
       tokio::spawn(async move {
-        let mut s = in_stream;
-        while let Some(_) = s.next().await {
-          let _ = tx.send(Arc::new(()) as Arc<dyn Any + Send + Sync>).await;
+        use futures::StreamExt;
+        while let Some(item) = in_stream.next().await {
+          let _ = out_tx.send(item).await;
         }
       });
+
       let mut outputs = HashMap::new();
       outputs.insert(
         "out".to_string(),
-        Box::pin(ReceiverStream::new(rx))
-          as Pin<Box<dyn tokio_stream::Stream<Item = Arc<dyn Any + Send + Sync>> + Send>>,
+        Box::pin(ReceiverStream::new(out_rx))
+          as Pin<Box<dyn futures::Stream<Item = Arc<dyn std::any::Any + Send + Sync>> + Send>>,
       );
       Ok(outputs)
     })

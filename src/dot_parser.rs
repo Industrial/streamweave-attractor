@@ -357,12 +357,13 @@ fn skip_attr_block(s: &str) -> Result<&str, String> {
   Err("Unclosed attribute block".to_string())
 }
 
-/// Skips an assignment `key=value;` and returns the remainder.
+/// Skips an assignment `key=value` and returns the remainder.
+/// Parses the value correctly so we don't consume the rest of the file when there's no semicolon.
 fn skip_assign(s: &str) -> Result<&str, String> {
   let eq = s.find('=').ok_or("Expected '='")?;
   let rest = s[eq + 1..].trim_start();
-  let end = rest.find(';').map(|i| i + 1).unwrap_or(rest.len());
-  Ok(&s[eq + 1 + end..])
+  let (_, after_value) = parse_value(rest)?;
+  Ok(after_value.trim_start().trim_start_matches(';'))
 }
 
 /// Skips a balanced `{...}` subgraph and returns the remainder.

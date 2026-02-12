@@ -16,6 +16,9 @@
 //! - ExecuteHandlerNode, SelectEdgeNode, ApplyContextUpdatesNode,
 //!   CheckGoalGatesNode, CreateCheckpointNode, FindStartNode
 
+pub mod compiler;
+#[cfg(test)]
+mod compiler_test;
 pub mod dot_parser;
 #[cfg(test)]
 mod dot_parser_test;
@@ -25,6 +28,7 @@ mod graph_test;
 pub mod nodes;
 pub mod types;
 
+pub use compiler::compile_attractor_graph;
 pub use graph::attractor_graph;
 pub use nodes::{AttractorExecutionLoopNode, AttractorResult};
 pub use types::{AttractorGraph, AttractorNode, ExecutionState, NodeOutcome};
