@@ -7,10 +7,10 @@ use futures::StreamExt;
 use streamweave::node::Node;
 use tokio_stream::wrappers::ReceiverStream;
 
+use super::ParseDotNode;
+use super::parse_dot::ParseDotItemResult;
 use super::parse_dot::process_dot;
 use super::parse_dot::process_parse_dot_item;
-use super::parse_dot::ParseDotItemResult;
-use super::ParseDotNode;
 
 #[tokio::test]
 async fn node_execute_err_missing_input() {

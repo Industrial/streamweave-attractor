@@ -9,5 +9,6 @@ bin/check
 bin/lint
 bin/build
 bin/test
+# bin/test-examples  # simple_pipeline requires LLM; run manually when needed
 bin/audit
 bin/check-docs

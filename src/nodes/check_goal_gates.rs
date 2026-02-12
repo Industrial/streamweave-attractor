@@ -32,8 +32,7 @@ pub struct CheckGoalGatesOutput {
 
 /// Returns true if the outcome satisfies a goal gate (Success or PartialSuccess).
 pub(crate) fn goal_gate_passed(outcome: &NodeOutcome) -> bool {
-  outcome.status == OutcomeStatus::Success
-    || outcome.status == OutcomeStatus::PartialSuccess
+  outcome.status == OutcomeStatus::Success || outcome.status == OutcomeStatus::PartialSuccess
 }
 
 /// Checks goal gates per attractor-spec §3.4; returns gate_ok and optional retry_target.

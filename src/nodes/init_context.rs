@@ -20,7 +20,9 @@ pub struct InitContextNode {
 }
 
 /// Processes one input item; returns ExecutionState if item is an AttractorGraph.
-pub(crate) fn process_init_context_item(item: Arc<dyn Any + Send + Sync>) -> Option<ExecutionState> {
+pub(crate) fn process_init_context_item(
+  item: Arc<dyn Any + Send + Sync>,
+) -> Option<ExecutionState> {
   let graph = item.downcast::<AttractorGraph>().ok()?;
   Some(create_initial_state((*graph).clone()))
 }

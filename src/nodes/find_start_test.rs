@@ -7,9 +7,9 @@ use futures::StreamExt;
 use streamweave::node::Node;
 use tokio_stream::wrappers::ReceiverStream;
 
+use super::FindStartNode;
 use super::find_start::find_start_id;
 use super::find_start::process_find_start_item;
-use super::FindStartNode;
 
 #[tokio::test]
 async fn node_execute_skips_wrong_type() {

@@ -7,10 +7,10 @@ use futures::StreamExt;
 use streamweave::node::Node;
 use tokio_stream::wrappers::ReceiverStream;
 
+use super::CreateCheckpointNode;
+use super::create_checkpoint::CreateCheckpointInput;
 use super::create_checkpoint::create_checkpoint_from_input;
 use super::create_checkpoint::process_create_checkpoint_item;
-use super::create_checkpoint::CreateCheckpointInput;
-use super::CreateCheckpointNode;
 
 #[tokio::test]
 async fn node_execute_skips_wrong_type() {

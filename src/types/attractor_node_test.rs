@@ -1,7 +1,7 @@
 //! Tests for `AttractorNode`.
 
 use super::attractor_node::{
-  id_is_exit, id_is_start, shape_is_exit, shape_is_start, AttractorNode,
+  AttractorNode, id_is_exit, id_is_start, shape_is_exit, shape_is_start,
 };
 
 fn node(id: &str, shape: &str) -> AttractorNode {
@@ -11,6 +11,7 @@ fn node(id: &str, shape: &str) -> AttractorNode {
     handler_type: None,
     label: None,
     prompt: None,
+    command: None,
     goal_gate: false,
     max_retries: 0,
   }

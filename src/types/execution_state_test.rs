@@ -11,6 +11,7 @@ fn node(id: &str, shape: &str) -> AttractorNode {
     handler_type: None,
     label: None,
     prompt: None,
+    command: None,
     goal_gate: false,
     max_retries: 0,
   }

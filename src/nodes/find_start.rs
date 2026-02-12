@@ -27,7 +27,7 @@ pub(crate) fn find_start_id(graph: &AttractorGraph) -> Option<String> {
 /// Processes one input item; returns start id if item is a graph with a start node.
 pub(crate) fn process_find_start_item(item: Arc<dyn Any + Send + Sync>) -> Option<String> {
   let graph = item.downcast::<AttractorGraph>().ok()?;
-  find_start_id(&*graph)
+  find_start_id(&graph)
 }
 
 impl FindStartNode {

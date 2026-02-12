@@ -1,6 +1,6 @@
 //! Attractor execution loop - runs the pipeline traversal until terminal.
 
-use crate::nodes::execute_handler::{execute_handler, ExecuteHandlerInput};
+use crate::nodes::execute_handler::{ExecuteHandlerInput, execute_handler};
 use crate::nodes::select_edge::{SelectEdgeInput, select_edge};
 use crate::types::{ExecutionState, NodeOutcome};
 use async_trait::async_trait;
@@ -63,9 +63,7 @@ pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResu
       context: state.context.clone(),
       graph: state.graph.clone(),
     };
-    last_outcome = execute_handler(&handler_input).unwrap_or_else(|e| {
-      crate::types::NodeOutcome::fail(e)
-    });
+    last_outcome = execute_handler(&handler_input).unwrap_or_else(crate::types::NodeOutcome::fail);
     apply_context_updates(&mut state.context, &last_outcome);
     state.completed_nodes.push(state.current_node_id.clone());
     state

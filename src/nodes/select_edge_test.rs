@@ -9,8 +9,8 @@ use streamweave::node::Node;
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::select_edge::{
-  best_by_weight_then_lexical, evaluate_condition, normalize_label, SelectEdgeInput, SelectEdgeNode,
-  select_edge,
+  SelectEdgeInput, SelectEdgeNode, best_by_weight_then_lexical, evaluate_condition,
+  normalize_label, select_edge,
 };
 
 fn node(id: &str, shape: &str) -> AttractorNode {
@@ -20,6 +20,7 @@ fn node(id: &str, shape: &str) -> AttractorNode {
     handler_type: None,
     label: None,
     prompt: None,
+    command: None,
     goal_gate: false,
     max_retries: 0,
   }
@@ -53,7 +54,7 @@ fn normalize_label_strips_prefixes() {
 
 #[test]
 fn best_by_weight_then_lexical_picks_highest_weight() {
-  let edges = vec![
+  let edges = [
     AttractorEdge {
       from_node: "a".to_string(),
       to_node: "z".to_string(),

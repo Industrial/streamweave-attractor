@@ -28,6 +28,8 @@ pub struct AttractorNode {
   pub handler_type: Option<String>,
   pub label: Option<String>,
   pub prompt: Option<String>,
+  /// Command to run for `exec` handler; success on exit 0, fail otherwise.
+  pub command: Option<String>,
   pub goal_gate: bool,
   pub max_retries: u32,
 }

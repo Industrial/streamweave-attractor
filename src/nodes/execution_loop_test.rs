@@ -7,8 +7,8 @@ use futures::StreamExt;
 use streamweave::node::Node;
 use tokio_stream::wrappers::ReceiverStream;
 
-use super::execution_loop::{apply_context_updates, run_execution_loop_once, RunLoopResult};
 use super::AttractorExecutionLoopNode;
+use super::execution_loop::{RunLoopResult, apply_context_updates, run_execution_loop_once};
 use crate::types::{AttractorGraph, AttractorNode, ExecutionState, NodeOutcome};
 
 #[test]
@@ -56,6 +56,7 @@ async fn node_execute_err_node_not_found() {
       handler_type: Some("start".to_string()),
       label: None,
       prompt: None,
+      command: None,
       goal_gate: false,
       max_retries: 0,
     },
@@ -68,6 +69,7 @@ async fn node_execute_err_node_not_found() {
       handler_type: Some("exit".to_string()),
       label: None,
       prompt: None,
+      command: None,
       goal_gate: false,
       max_retries: 0,
     },
@@ -174,6 +176,7 @@ fn run_execution_loop_once_returns_err_when_node_not_found() {
       handler_type: Some("start".to_string()),
       label: None,
       prompt: None,
+      command: None,
       goal_gate: false,
       max_retries: 0,
     },

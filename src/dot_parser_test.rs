@@ -247,8 +247,14 @@ fn resolve_handler_from_shape_maps_shapes() {
     resolve_handler_from_shape("Mdiamond").as_deref(),
     Some("start")
   );
-  assert_eq!(resolve_handler_from_shape("box").as_deref(), Some("codergen"));
-  assert_eq!(resolve_handler_from_shape("unknown").as_deref(), Some("codergen"));
+  assert_eq!(
+    resolve_handler_from_shape("box").as_deref(),
+    Some("codergen")
+  );
+  assert_eq!(
+    resolve_handler_from_shape("unknown").as_deref(),
+    Some("codergen")
+  );
 }
 
 #[test]

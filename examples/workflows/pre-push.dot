@@ -1,0 +1,44 @@
+digraph PrePush {
+  graph [
+    goal="Run pre-push quality gates for Rust project; fix-and-retry until success",
+    label="Pre-push (Rust): bin/pre-push ⟲ fix → bin/test-coverage ⟲ fix"
+  ]
+  rankdir=LR
+
+  start [shape=Mdiamond, label="Start"]
+  exit [shape=Msquare, label="Exit"]
+
+  pre_push [
+    shape=box,
+    type=exec,
+    label="bin/pre-push",
+    command="devenv shell -- bin/pre-push"
+  ]
+
+  test_coverage [
+    shape=box,
+    type=exec,
+    label="bin/test-coverage",
+    command="devenv shell -- bin/test-coverage"
+  ]
+
+  fix_pre_push [
+    shape=box,
+    label="Fix (pre-push)",
+    prompt="bin/pre-push failed (format, lint, check, build, test, etc.). From the output or logs, identify failures. Create small bd tasks: devenv shell -- bd create \"...\" -t task -p 1 --json. Act as beads-worker: bd ready, claim one task, fix it, bd close, commit. Do NOT commit .beads/issues.jsonl. Exit 0; pipeline returns to bin/pre-push."
+  ]
+
+  fix_test_coverage [
+    shape=box,
+    label="Fix (test-coverage)",
+    prompt="bin/test-coverage failed. From the output, identify coverage or test failures. Create small bd tasks: devenv shell -- bd create \"...\" -t task -p 1 --json. Act as beads-worker: bd ready, claim one task, fix it, bd close, commit. Do NOT commit .beads/issues.jsonl. Exit 0; pipeline returns to bin/test-coverage."
+  ]
+
+  start -> pre_push
+  pre_push -> test_coverage [label="success", condition="outcome=success"]
+  pre_push -> fix_pre_push [label="failure", condition="outcome=fail"]
+  fix_pre_push -> pre_push
+  test_coverage -> exit [label="success", condition="outcome=success"]
+  test_coverage -> fix_test_coverage [label="failure", condition="outcome=fail"]
+  fix_test_coverage -> test_coverage
+}

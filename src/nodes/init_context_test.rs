@@ -7,9 +7,9 @@ use futures::StreamExt;
 use streamweave::node::Node;
 use tokio_stream::wrappers::ReceiverStream;
 
+use super::InitContextNode;
 use super::init_context::create_initial_state;
 use super::init_context::process_init_context_item;
-use super::InitContextNode;
 
 #[tokio::test]
 async fn node_execute_skips_wrong_type() {

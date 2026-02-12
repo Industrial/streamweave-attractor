@@ -1,0 +1,77 @@
+//! Exec node: runs a shell command, succeeds on exit 0, fails otherwise.
+
+use async_trait::async_trait;
+use std::any::Any;
+use std::collections::HashMap;
+use std::pin::Pin;
+use std::process::Command;
+use std::sync::Arc;
+use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::StreamExt;
+
+use crate::types::NodeOutcome;
+
+/// Node that runs a shell command and emits NodeOutcome.
+pub struct ExecNode {
+  name: String,
+  command: String,
+}
+
+impl ExecNode {
+  pub fn new(name: impl Into<String>, command: impl Into<String>) -> Self {
+    Self { name: name.into(), command: command.into() }
+  }
+}
+
+#[async_trait]
+impl Node for ExecNode {
+  fn name(&self) -> &str { &self.name }
+  fn set_name(&mut self, name: &str) { self.name = name.to_string(); }
+  fn input_port_names(&self) -> &[String] {
+    static P: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+    P.get_or_init(|| vec!["in".to_string()])
+  }
+  fn output_port_names(&self) -> &[String] {
+    static P: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+    P.get_or_init(|| vec!["out".to_string(), "error".to_string()])
+  }
+  fn has_input_port(&self, name: &str) -> bool { name == "in" }
+  fn has_output_port(&self, name: &str) -> bool { name == "out" || name == "error" }
+
+  fn execute(
+    &self,
+    mut inputs: InputStreams,
+  ) -> Pin<Box<dyn std::future::Future<Output = Result<OutputStreams, NodeExecutionError>> + Send + '_>> {
+    let cmd = self.command.clone();
+    Box::pin(async move {
+      let in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
+      let (out_tx, out_rx) = mpsc::channel(16);
+      let (err_tx, err_rx) = mpsc::channel(16);
+      tokio::spawn(async move {
+        let mut s = in_stream;
+        while let Some(_) = s.next().await {
+          let outcome = tokio::task::spawn_blocking({
+            let c = cmd.clone();
+            move || {
+              match Command::new("sh").arg("-c").arg(&c).output() {
+                Ok(o) => if o.status.success() {
+                  NodeOutcome::success("ok")
+                } else {
+                  NodeOutcome::fail(format!("exit {}", o.status.code().unwrap_or(-1)))
+                },
+                Err(e) => NodeOutcome::fail(format!("{}", e)),
+              }
+            }
+          }).await.unwrap_or_else(|e| NodeOutcome::fail(format!("{}", e)));
+          let _ = out_tx.send(Arc::new(outcome) as Arc<dyn Any + Send + Sync>).await;
+        }
+      });
+      let mut outputs = HashMap::new();
+      outputs.insert("out".to_string(), Box::pin(ReceiverStream::new(out_rx)) as Pin<Box<dyn tokio_stream::Stream<Item = Arc<dyn Any + Send + Sync>> + Send>>);
+      outputs.insert("error".to_string(), Box::pin(ReceiverStream::new(err_rx)) as Pin<Box<dyn tokio_stream::Stream<Item = Arc<dyn Any + Send + Sync>> + Send>>);
+      Ok(outputs)
+    })
+  }
+}

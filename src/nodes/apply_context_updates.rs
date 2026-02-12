@@ -23,7 +23,7 @@ pub(crate) fn process_apply_context_updates_item(
   item: Arc<dyn Any + Send + Sync>,
 ) -> Option<RunContext> {
   let input = item.downcast::<ApplyContextUpdatesInput>().ok()?;
-  Some(apply_updates(&*input))
+  Some(apply_updates(&input))
 }
 
 /// Applies outcome context_updates and status/preferred_label to context, returning the updated RunContext.

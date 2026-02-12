@@ -25,7 +25,7 @@ pub(crate) fn process_create_checkpoint_item(
   item: Arc<dyn Any + Send + Sync>,
 ) -> Option<Checkpoint> {
   let input = item.downcast::<CreateCheckpointInput>().ok()?;
-  Some(create_checkpoint_from_input(&*input))
+  Some(create_checkpoint_from_input(&input))
 }
 
 /// Builds a Checkpoint from CreateCheckpointInput.

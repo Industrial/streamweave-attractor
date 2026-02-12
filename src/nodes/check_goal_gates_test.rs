@@ -9,7 +9,7 @@ use streamweave::node::Node;
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::check_goal_gates::{
-  goal_gate_passed, CheckGoalGatesInput, CheckGoalGatesNode, check_goal_gates,
+  CheckGoalGatesInput, CheckGoalGatesNode, check_goal_gates, goal_gate_passed,
 };
 
 fn node(id: &str, goal_gate: bool) -> AttractorNode {
@@ -19,6 +19,7 @@ fn node(id: &str, goal_gate: bool) -> AttractorNode {
     handler_type: None,
     label: None,
     prompt: None,
+    command: None,
     goal_gate,
     max_retries: 0,
   }

@@ -21,24 +21,46 @@ The authoritative Attractor specs live in the upstream repo:
 
 ## Building and running
 
-**Nix (any NixOS / Nix):**
+### Running via CLI
+
+The main entry point is the `simple_pipeline` example, which runs a minimal Attractor graph (Run tests → Report). You can run it in several ways:
+
+| Method | Command | Notes |
+|--------|---------|-------|
+| **Nix (remote)** | `nix run github:Industrial/streamweave-attractor` | Fetches, builds, and runs in one step |
+| **Nix (local)** | `nix run` | From a local checkout; builds the example and installs as `streamweave-attractor` |
+| **Cargo** | `cargo run --example simple_pipeline` | Direct run; requires Rust toolchain |
+| **devenv** | `devenv shell -- cargo run --example simple_pipeline` | Uses project devenv for consistent tooling |
+
+**Examples:**
 
 ```bash
+# Run from Nix (no Rust install needed)
 nix run github:Industrial/streamweave-attractor
+
+# Run from local checkout with devenv
+devenv shell -- cargo run --example simple_pipeline
+
+# Build only
+devenv shell -- cargo build --examples
 ```
 
-Or from a local checkout:
-
-```bash
-nix run
-```
-
-**Development (devenv):**
+### Development
 
 ```bash
 devenv shell -- cargo build
 devenv shell -- cargo run --example simple_pipeline
 ```
+
+### Pre-push quality gates
+
+Run all quality checks before pushing:
+
+```bash
+devenv shell -- bin/pre-push
+```
+
+This runs: format, fix, check, lint, build, test, audit, check-docs. (Examples like `simple_pipeline` require an LLM—run `bin/test-examples` manually when needed.) See `examples/workflows/pre-push.dot` for the bd-centric fix-and-retry workflow.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) for development workflow and agent instructions.
 

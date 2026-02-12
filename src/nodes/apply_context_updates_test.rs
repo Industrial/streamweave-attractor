@@ -9,8 +9,8 @@ use streamweave::node::Node;
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::apply_context_updates::{
-  process_apply_context_updates_item, ApplyContextUpdatesInput, ApplyContextUpdatesNode,
-  apply_updates,
+  ApplyContextUpdatesInput, ApplyContextUpdatesNode, apply_updates,
+  process_apply_context_updates_item,
 };
 
 #[tokio::test]

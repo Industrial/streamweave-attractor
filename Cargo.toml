@@ -19,6 +19,12 @@ futures = "0.3"
 tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros"] }
 tokio-stream = "0.1"
 
+[[example]]
+name = "simple_pipeline"
+
+[[example]]
+name = "run_dot"
+
 [dev-dependencies]
 proptest = "1.5"
 tempfile = "3.10"

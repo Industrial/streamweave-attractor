@@ -232,11 +232,15 @@ pub(crate) fn parse_number(s: &str) -> Option<(String, &str)> {
 }
 
 /// Builds an `AttractorNode` from a node id and its attribute list.
-pub(crate) fn parse_node_attrs(id: &str, attrs: &[(String, String)]) -> Result<AttractorNode, String> {
+pub(crate) fn parse_node_attrs(
+  id: &str,
+  attrs: &[(String, String)],
+) -> Result<AttractorNode, String> {
   let mut shape = "box".to_string();
   let mut handler_type = None;
   let mut label = Some(id.to_string());
   let mut prompt = None;
+  let mut command = None;
   let mut goal_gate = false;
   let mut max_retries = 0u32;
 
@@ -246,6 +250,7 @@ pub(crate) fn parse_node_attrs(id: &str, attrs: &[(String, String)]) -> Result<A
       "type" => handler_type = Some(v.clone()),
       "label" => label = Some(v.clone()),
       "prompt" => prompt = Some(v.clone()),
+      "command" => command = Some(v.clone()),
       "goal_gate" => goal_gate = v.eq_ignore_ascii_case("true"),
       "max_retries" => max_retries = v.parse().unwrap_or(0),
       _ => {}
@@ -260,6 +265,7 @@ pub(crate) fn parse_node_attrs(id: &str, attrs: &[(String, String)]) -> Result<A
     handler_type,
     label,
     prompt,
+    command,
     goal_gate,
     max_retries,
   })

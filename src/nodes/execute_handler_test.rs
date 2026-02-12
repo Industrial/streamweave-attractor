@@ -9,7 +9,7 @@ use streamweave::node::Node;
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::execute_handler::{
-  build_codergen_outcome, ExecuteHandlerInput, ExecuteHandlerNode, execute_handler,
+  ExecuteHandlerInput, ExecuteHandlerNode, build_codergen_outcome, execute_handler,
 };
 
 fn node(id: &str, handler_type: Option<&str>) -> AttractorNode {
@@ -19,6 +19,7 @@ fn node(id: &str, handler_type: Option<&str>) -> AttractorNode {
     handler_type: handler_type.map(String::from),
     label: None,
     prompt: None,
+    command: None,
     goal_gate: false,
     max_retries: 0,
   }
@@ -49,7 +50,10 @@ fn build_codergen_outcome_includes_last_stage() {
   let n = node("run", Some("codergen"));
   let o = build_codergen_outcome(&n);
   assert_eq!(o.status, OutcomeStatus::Success);
-  assert_eq!(o.context_updates.get("last_stage").map(String::as_str), Some("run"));
+  assert_eq!(
+    o.context_updates.get("last_stage").map(String::as_str),
+    Some("run")
+  );
 }
 
 #[test]
