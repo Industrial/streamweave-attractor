@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec > >(tee log/check.log) 2>&1 
+
+echo "> check"
+
+echo "> check > cargo check"
+RUSTFLAGS='-D warnings' cargo check --lib --all-features

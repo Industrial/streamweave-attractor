@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec > >(tee log/fix.log) 2>&1 
+
+echo "> fix"
+
+echo "> fix > cargo fix"
+RUSTFLAGS='-D warnings' cargo fix --allow-dirty --allow-staged --lib --all-features
+
+echo "> fix > cargo clippy --fix"
+RUSTFLAGS='-D warnings' cargo clippy --fix --allow-dirty --allow-staged --lib --all-features -- -D warnings
+

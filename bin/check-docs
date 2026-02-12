@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec > >(tee log/docs-check.log) 2>&1
+
+echo "> check-docs"
+
+echo "> check-docs > cargo doc (compile check)"
+# Generate docs (warnings will be shown but script continues)
+# Note: missing_docs warnings from lib.rs will appear but won't fail the build
+RUSTDOCFLAGS='' cargo doc --all-features --no-deps 2>&1 | tee log/docs-warnings.log | grep -E "(warning|error|Documenting|Finished)" || true
+echo "✓ Documentation generation completed (warnings logged)"
+
+echo "> check-docs > cargo clippy (missing docs check)"
+# Check for missing docs - treat as errors
+cargo clippy --lib --all-features -- -D warnings -W clippy::missing_docs_in_private_items 2>&1 | tee log/clippy-docs-errors.log
+

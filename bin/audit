@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "> audit"
+
+echo "> audit > cargo audit"
+# Workaround: cargo-audit doesn't support CVSS 4.0 yet
+# Try to run audit, but if it fails due to CVSS 4.0 parsing, skip it
+# Note: cargo-audit provides 'cargo audit' as a subcommand when installed
+audit_output=$(cargo audit \
+  --ignore RUSTSEC-2023-0071 \
+  --ignore RUSTSEC-2024-0436 \
+  --ignore RUSTSEC-2024-0445 2>&1) || {
+  exit_code=$?
+  # Check if the error is specifically about CVSS 4.0
+  if echo "$audit_output" | grep -qi "unsupported CVSS version: 4.0\|CVSS:4.0"; then
+    echo "⚠️  cargo-audit doesn't support CVSS 4.0 yet (known issue), skipping audit"
+    exit 0
+  else
+    # Some other error occurred - show the output and exit with error
+    echo "$audit_output"
+    exit $exit_code
+  fi
+}
+

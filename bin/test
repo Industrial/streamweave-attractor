@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec > >(tee log/test.log) 2>&1 
+
+echo "> test"
+
+echo "> test > cargo nextest"
+RUSTFLAGS='-D warnings' cargo nextest run --all-features

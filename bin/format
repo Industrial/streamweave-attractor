@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec > >(tee log/format.log) 2>&1 
+
+echo "> format"
+
+# echo "> format > cargo fmt"
+# cargo fmt --all
+
+echo "> format > treefmt"
+treefmt

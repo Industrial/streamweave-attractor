@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec > >(tee log/lint.log) 2>&1 
+
+echo "> lint"
+
+echo "> lint > cargo fmt --check"
+cargo fmt --all -- --check
+
+echo "> lint > cargo clippy"
+cargo clippy --all-targets --all-features -- -D warnings

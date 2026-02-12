@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "> pre-commit"
+
+bin/format
+bin/fix
+bin/check
+bin/lint
+bin/build
+bin/test
+bin/audit
+bin/check-docs
