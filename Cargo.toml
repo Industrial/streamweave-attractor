@@ -24,9 +24,6 @@ tokio-stream = "0.1"
 [[example]]
 name = "simple_pipeline"
 
-[[example]]
-name = "run_dot"
-
 [[bin]]
 name = "run_dot"
 path = "src/bin/run_dot.rs"

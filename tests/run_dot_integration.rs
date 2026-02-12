@@ -1,15 +1,15 @@
 //! Integration tests for the run_dot CLI.
 //!
-//! Runs the example via `cargo run --example run_dot` with temp .dot files.
+//! Runs the binary via `cargo run --bin run_dot` with temp .dot files.
 
 use std::process::Command;
 
 fn run_run_dot(args: &[&str]) -> std::process::Output {
   Command::new("cargo")
-    .args(["run", "--example", "run_dot", "--"])
+    .args(["run", "--bin", "run_dot", "--"])
     .args(args)
     .output()
-    .expect("run cargo run --example run_dot")
+    .expect("run cargo run --bin run_dot")
 }
 
 #[test]
