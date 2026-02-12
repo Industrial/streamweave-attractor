@@ -1,19 +1,23 @@
 [package]
 name = "streamweave-attractor"
-version = "0.9.0"
+version = "0.1.0"
 edition = "2024"
 authors = ["Tom Wieland <tom.wieland@gmail.com>"]
 license = "CC-BY-SA-4.0"
 repository = "https://github.com/Industrial/streamweave-attractor"
 homepage = "https://github.com/Industrial/streamweave-attractor"
 documentation = "https://docs.rs/streamweave-attractor"
-description = "Composable, async, stream-first computation in pure Rust"
-keywords = ["stream", "async", "pipeline", "data-processing"]
+description = "Attractor pipeline as a StreamWeave graph"
+keywords = ["stream", "async", "pipeline", "attractor"]
 categories = ["asynchronous", "data-structures"]
 
 [dependencies]
 streamweave = "0.9"
 tracing = "0.1"
+async-trait = "0.1"
+futures = "0.3"
+tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros"] }
+tokio-stream = "0.1"
 
 [dev-dependencies]
 proptest = "1.5"

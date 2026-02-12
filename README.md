@@ -21,9 +21,23 @@ The authoritative Attractor specs live in the upstream repo:
 
 ## Building and running
 
+**Nix (any NixOS / Nix):**
+
+```bash
+nix run github:Industrial/streamweave-attractor
+```
+
+Or from a local checkout:
+
+```bash
+nix run
+```
+
+**Development (devenv):**
+
 ```bash
 devenv shell -- cargo build
-devenv shell -- cargo run
+devenv shell -- cargo run --example simple_pipeline
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) for development workflow and agent instructions.
