@@ -47,7 +47,8 @@
 
     # Development tools
     direnv
-    pre-commit
+    # Git hooks (prek = pre-commit replacement, single binary, no Python)
+    prek
 
     # Formatting tools
     alejandra
@@ -75,21 +76,15 @@
     yamlfmt
   ];
 
-  # Pre-commit hooks
-  git-hooks = {
-    hooks = {
-      commitizen = {
-        enable = true;
-        stages = ["commit-msg"];
-      };
-      pre-commit = {
-        enable = true;
-        name = "pre-commit";
-        description = "Pre commit script, running all tasks in series";
-        entry = "bin/pre-commit";
-        language = "system";
-        pass_filenames = false;
-      };
+  scripts = {
+    prek-install = {
+      exec = ''
+        prek install -q --overwrite
+      '';
     };
   };
+
+  enterShell = ''
+    prek-install
+  '';
 }

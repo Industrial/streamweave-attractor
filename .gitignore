@@ -14,17 +14,12 @@
 .beads/
 .cargo/
 .devenv*
-.devenv*
-.direnv
 .direnv
 .env
 .env.*.local
 .env.local
 .idea
 .idea/
-.pre-commit-config.yaml
-.pre-commit-config.yaml
-.vscode
 .vscode/
 /.serena/
 /.tmp
