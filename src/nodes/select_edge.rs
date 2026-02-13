@@ -160,6 +160,7 @@ pub(crate) fn best_by_weight_then_lexical(edges: Vec<&AttractorEdge>) -> &Attrac
 }
 
 /// StreamWeave node that selects the next edge per the Attractor algorithm.
+#[allow(dead_code)] // reserved for interpretive pipeline
 pub struct SelectEdgeNode {
   /// Node display name.
   name: String,
@@ -170,6 +171,8 @@ pub struct SelectEdgeNode {
 }
 
 impl SelectEdgeNode {
+  /// Creates a new SelectEdgeNode with the given display name.
+  #[allow(dead_code)]
   pub fn new(name: impl Into<String>) -> Self {
     Self {
       name: name.into(),

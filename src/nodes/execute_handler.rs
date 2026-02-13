@@ -23,6 +23,7 @@ pub struct ExecuteHandlerInput {
 }
 
 /// StreamWeave node that executes the handler for one Attractor pipeline node.
+#[allow(dead_code)] // reserved for interpretive pipeline
 pub struct ExecuteHandlerNode {
   /// Node display name.
   name: String,
@@ -33,6 +34,8 @@ pub struct ExecuteHandlerNode {
 }
 
 impl ExecuteHandlerNode {
+  /// Creates a new ExecuteHandlerNode with the given display name.
+  #[allow(dead_code)]
   pub fn new(name: impl Into<String>) -> Self {
     Self {
       name: name.into(),

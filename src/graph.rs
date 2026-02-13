@@ -1,8 +1,8 @@
 //! Build the Attractor pipeline as a StreamWeave graph.
 
+use crate::nodes::ParseDotNode;
 use crate::nodes::execution_loop::AttractorExecutionLoopNode;
 use crate::nodes::init_context::InitContextNode;
-use crate::nodes::parse_dot::ParseDotNode;
 use crate::nodes::validate_graph::ValidateGraphNode;
 use streamweave::graph;
 use tracing::{info, instrument};

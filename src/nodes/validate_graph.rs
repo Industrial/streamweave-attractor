@@ -21,6 +21,7 @@ pub struct ValidateGraphNode {
 }
 
 impl ValidateGraphNode {
+  /// Creates a new ValidateGraphNode with the given display name.
   pub fn new(name: impl Into<String>) -> Self {
     Self {
       name: name.into(),
