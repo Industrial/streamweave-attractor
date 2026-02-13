@@ -25,7 +25,7 @@
       # Cargo.lock must be committed so the flake input has it (see README).
       defaultPackage = pkgs.rustPlatform.buildRustPackage {
         pname = "streamweave-attractor";
-        version = "0.1.0";
+        version = "0.1.2";
         src = self;
         cargoLock.lockFile = self + "/Cargo.lock";
         nativeBuildInputs = [pkgs.pkg-config];
