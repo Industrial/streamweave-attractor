@@ -1,5 +1,7 @@
 //! Identity / pass-through node for compiled graph (start and exit placeholders).
+//! Forwards GraphPayload with current_node_id and completed_nodes updated to this node.
 
+use crate::types::GraphPayload;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::pin::Pin;
@@ -70,7 +72,13 @@ impl Node for IdentityNode {
       tokio::spawn(async move {
         use futures::StreamExt;
         while let Some(item) = in_stream.next().await {
-          let _ = out_tx.send(item).await;
+          let out_item: Arc<dyn std::any::Any + Send + Sync> =
+            if let Ok(payload) = item.downcast::<GraphPayload>() {
+              Arc::new(payload.with_node_completed(&name))
+            } else {
+              item
+            };
+          let _ = out_tx.send(out_item).await;
         }
       });
 

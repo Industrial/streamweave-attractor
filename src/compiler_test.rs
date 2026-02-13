@@ -3,6 +3,8 @@
 use crate::compiler::compile_attractor_graph;
 use crate::dot_parser::parse_dot;
 use crate::runner::run_streamweave_graph;
+use crate::types::GraphPayload;
+use std::collections::HashMap;
 
 #[test]
 fn compile_rejects_exec_without_command() {
@@ -16,7 +18,7 @@ fn compile_rejects_exec_without_command() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  match compile_attractor_graph(&ast) {
+  match compile_attractor_graph(&ast, None) {
     Ok(_) => panic!("expected compile to fail (exec without command)"),
     Err(e) => {
       assert!(e.to_lowercase().contains("exec"));
@@ -41,7 +43,7 @@ fn compile_with_conditional_routing() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  let graph = compile_attractor_graph(&ast).unwrap();
+  let graph = compile_attractor_graph(&ast, None).unwrap();
   // Graph built with OutcomeRouterNode for run
   assert!(graph.name().contains("compiled"));
 }
@@ -57,7 +59,7 @@ fn compile_trivial_start_exit() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  let graph = compile_attractor_graph(&ast).unwrap();
+  let graph = compile_attractor_graph(&ast, None).unwrap();
   // Graph built successfully; we have start and exit as identity nodes
   assert!(graph.name().contains("compiled"));
 }
@@ -73,8 +75,9 @@ async fn run_streamweave_graph_trivial_start_exit() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  let graph = compile_attractor_graph(&ast).unwrap();
-  let out = run_streamweave_graph(graph).await.unwrap();
+  let graph = compile_attractor_graph(&ast, None).unwrap();
+  let initial = GraphPayload::initial(HashMap::new(), "start");
+  let out = run_streamweave_graph(graph, initial).await.unwrap();
   // Identity path: one trigger in → one item out
   assert!(out.is_some(), "expected one output from start→exit graph");
 }
@@ -88,7 +91,7 @@ fn compile_err_no_start() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  match compile_attractor_graph(&ast) {
+  match compile_attractor_graph(&ast, None) {
     Ok(_) => panic!("expected compile to fail (no start)"),
     Err(e) => assert!(e.to_lowercase().contains("start")),
   }
@@ -103,7 +106,7 @@ fn compile_err_no_exit() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  match compile_attractor_graph(&ast) {
+  match compile_attractor_graph(&ast, None) {
     Ok(_) => panic!("expected compile to fail (no exit)"),
     Err(e) => assert!(e.to_lowercase().contains("exit")),
   }
@@ -115,6 +118,6 @@ fn compile_pre_push_dot() {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/workflows/pre-push.dot");
   let dot = std::fs::read_to_string(&path).unwrap();
   let ast = parse_dot(&dot).unwrap();
-  let graph = compile_attractor_graph(&ast).unwrap();
+  let graph = compile_attractor_graph(&ast, None).unwrap();
   assert!(graph.name().contains("compiled"));
 }

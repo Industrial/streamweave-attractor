@@ -70,11 +70,15 @@ impl Node for ExecNode {
       tokio::spawn(async move {
         let mut s = in_stream;
         while let Some(item) = s.next().await {
-          let context: RunContext = item
-            .downcast::<GraphPayload>()
-            .ok()
+          let incoming = item.downcast::<GraphPayload>().ok();
+          let context: RunContext = incoming
+            .as_ref()
             .map(|p| p.context.clone())
             .unwrap_or_default();
+          let (current_node_id, completed_nodes) = incoming
+            .as_ref()
+            .map(|p| (p.current_node_id.clone(), p.completed_nodes.clone()))
+            .unwrap_or_else(|| (String::new(), vec![]));
           let outcome = tokio::task::spawn_blocking({
             let c = cmd.clone();
             move || match Command::new("sh").arg("-c").arg(&c).output() {
@@ -94,7 +98,9 @@ impl Node for ExecNode {
             context: context.clone(),
             outcome: outcome.clone(),
           });
-          let payload = GraphPayload::new(updated, Some(outcome));
+          let mut completed = completed_nodes;
+          completed.push(name.clone());
+          let payload = GraphPayload::new(updated, Some(outcome), name.clone(), completed);
           let _ = out_tx
             .send(Arc::new(payload) as Arc<dyn Any + Send + Sync>)
             .await;
