@@ -60,8 +60,9 @@ fn compile_trivial_start_exit() {
   "#;
   let ast = parse_dot(dot).unwrap();
   let graph = compile_attractor_graph(&ast, None).unwrap();
-  // Graph built successfully; we have start and exit as identity nodes
-  assert!(graph.name().contains("compiled"));
+  // Trivial case may be built via graph! or builder
+  assert!(graph.find_node_by_name("start").is_some());
+  assert!(graph.find_node_by_name("exit").is_some());
 }
 
 #[tokio::test]
