@@ -11,7 +11,7 @@
 use std::env;
 use std::fs;
 use std::process;
-use streamweave_attractor::{dot_parser, run_compiled_workflow};
+use streamweave_attractor::{dot_parser, run_compiled_graph};
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
@@ -47,7 +47,7 @@ async fn main() {
     }
   };
 
-  let r = match run_compiled_workflow(&ast) {
+  let r = match run_compiled_graph(&ast).await {
     Ok(res) => res,
     Err(e) => {
       eprintln!("Pipeline error: {}", e);

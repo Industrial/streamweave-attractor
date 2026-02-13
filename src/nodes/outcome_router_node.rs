@@ -1,6 +1,7 @@
-//! Routes NodeOutcome to success or fail output based on status.
+//! Routes payload to success or fail output based on outcome status.
+//! Accepts GraphPayload (routes by payload.outcome) or legacy NodeOutcome.
 
-use crate::types::{NodeOutcome, OutcomeStatus};
+use crate::types::{GraphPayload, NodeOutcome, OutcomeStatus};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::pin::Pin;
@@ -71,7 +72,19 @@ impl Node for OutcomeRouterNode {
       tokio::spawn(async move {
         use futures::StreamExt;
         while let Some(item) = in_stream.next().await {
-          if let Ok(o) = item.downcast::<NodeOutcome>() {
+          let item2 = item.clone();
+          if let Ok(payload) = item.downcast::<GraphPayload>() {
+            let is_success = payload.outcome.as_ref().is_none_or(|o| {
+              matches!(
+                o.status,
+                OutcomeStatus::Success | OutcomeStatus::PartialSuccess
+              )
+            });
+            let tx = if is_success { &success_tx } else { &fail_tx };
+            let _ = tx
+              .send(Arc::new((*payload).clone()) as Arc<dyn std::any::Any + Send + Sync>)
+              .await;
+          } else if let Ok(o) = item2.downcast::<NodeOutcome>() {
             let is_success = matches!(
               o.status,
               OutcomeStatus::Success | OutcomeStatus::PartialSuccess

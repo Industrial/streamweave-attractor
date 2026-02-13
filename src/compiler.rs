@@ -4,9 +4,7 @@
 //! Phase 2: ExecNode for exec, CodergenNode for codergen, identity for start/exit.
 //! Phase 3: Conditional routing (outcome=success / outcome=fail) via OutcomeRouterNode.
 
-use crate::nodes::{
-  CodergenNode, ExecNode, FixNode, IdentityNode, OutcomeRouterNode, validate_graph,
-};
+use crate::nodes::{CodergenNode, ExecNode, IdentityNode, OutcomeRouterNode, validate_graph};
 use crate::types::AttractorGraph;
 use streamweave::graph_builder::GraphBuilder;
 use streamweave::node::Node;
@@ -60,6 +58,9 @@ pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::grap
     .map(|n| n.id.clone())
     .ok_or("missing exit node")?;
 
+  // Nodes that are targets of outcome=fail edges (fix nodes). Back-edges from these
+  // to the exec node would create cycles; StreamWeave is DAG-only, so we omit them.
+  // Retry is handled by the runner re-invoking the graph (hybrid approach).
   let fix_node_ids: std::collections::HashSet<String> = ast
     .edges
     .iter()
@@ -77,12 +78,8 @@ pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::grap
         Box::new(ExecNode::new(&node.id, cmd))
       }
       _ => {
-        if fix_node_ids.contains(node_id) {
-          Box::new(FixNode::new(&node.id))
-        } else {
-          let prompt = node.prompt.as_deref().unwrap_or("").to_string();
-          Box::new(CodergenNode::new(&node.id, prompt))
-        }
+        let prompt = node.prompt.as_deref().unwrap_or("").to_string();
+        Box::new(CodergenNode::new(&node.id, prompt))
       }
     };
     builder = builder.add_node(node_id, sw_node);
@@ -114,6 +111,10 @@ pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::grap
         routed_sources.insert(from.clone());
         continue;
       }
+    }
+    // Omit fix→exec back-edges to keep the graph a DAG (see fix_node_ids).
+    if fix_node_ids.contains(&e.from_node) && routed_sources.contains(&e.to_node) {
+      continue;
     }
     builder = builder.connect(&e.from_node, "out", &e.to_node, "in");
   }

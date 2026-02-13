@@ -2,6 +2,7 @@
 
 use crate::compiler::compile_attractor_graph;
 use crate::dot_parser::parse_dot;
+use crate::runner::run_streamweave_graph;
 
 #[test]
 fn compile_rejects_exec_without_command() {
@@ -59,6 +60,23 @@ fn compile_trivial_start_exit() {
   let graph = compile_attractor_graph(&ast).unwrap();
   // Graph built successfully; we have start and exit as identity nodes
   assert!(graph.name().contains("compiled"));
+}
+
+#[tokio::test]
+async fn run_streamweave_graph_trivial_start_exit() {
+  let dot = r#"
+    digraph G {
+      graph [goal="test"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      start -> exit
+    }
+  "#;
+  let ast = parse_dot(dot).unwrap();
+  let graph = compile_attractor_graph(&ast).unwrap();
+  let out = run_streamweave_graph(graph).await.unwrap();
+  // Identity path: one trigger in → one item out
+  assert!(out.is_some(), "expected one output from start→exit graph");
 }
 
 #[test]

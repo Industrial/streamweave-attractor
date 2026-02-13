@@ -21,6 +21,8 @@ mod find_start;
 #[cfg(test)]
 mod find_start_test;
 mod fix_node;
+#[cfg(test)]
+mod fix_node_test;
 mod identity_node;
 pub(crate) mod init_context;
 #[cfg(test)]

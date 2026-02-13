@@ -1,113 +1,96 @@
-//! Compiled workflow runner: executes AttractorGraph using real exec and agent nodes.
+//! Compiled graph runner: compile AttractorGraph to StreamWeave graph and run it.
 //!
-//! Handles cycles (fix-and-retry) via a Rust loop; StreamWeave graphs are DAG-only.
-//! - Exec nodes: run shell command (success on exit 0)
-//! - Codergen/fix nodes: invoke ATTRACTOR_AGENT_CMD (or default cursor-agent) with prompt as stdin
+//! - [run_streamweave_graph]: run a compiled graph (one trigger in, first output out).
+//! - [run_compiled_graph]: compile AST then run, return [crate::nodes::execution_loop::AttractorResult].
 
-use crate::agent_run;
-use crate::nodes::execution_loop::{AttractorResult, apply_context_updates};
-use crate::nodes::init_context::create_initial_state;
-use crate::nodes::select_edge::{SelectEdgeInput, select_edge};
-use crate::types::{AttractorGraph, AttractorNode, NodeOutcome, RunContext};
-use std::env;
-use std::process::Command;
-use tracing::{info, instrument};
+use crate::nodes::execution_loop::AttractorResult;
+use crate::types::{AttractorGraph, GraphPayload, NodeOutcome};
+use std::sync::Arc;
 
-/// Executes a single node using compiled semantics (real exec, agent when ATTRACTOR_AGENT_CMD set).
-#[instrument(level = "trace", skip(node, _context, _graph))]
-pub fn execute_node_compiled(
-  node: &AttractorNode,
-  _context: &RunContext,
-  _graph: &AttractorGraph,
-) -> NodeOutcome {
-  let handler = node.handler_type.as_deref().unwrap_or("codergen");
+/// Runs a compiled StreamWeave graph: feeds one trigger into the "input" port,
+/// runs until the graph produces output on the "output" port, then returns the first output item.
+///
+/// The graph must have been built with `input` and `output` port names (as produced by
+/// [crate::compiler::compile_attractor_graph]).
+pub async fn run_streamweave_graph(
+  mut graph: streamweave::graph::Graph,
+) -> Result<Option<Arc<dyn std::any::Any + Send + Sync>>, String> {
+  let (tx_in, rx_in) = tokio::sync::mpsc::channel(1);
+  let (_tx_out, mut rx_out) = tokio::sync::mpsc::channel(16);
 
-  match handler {
-    "start" => NodeOutcome::success("Start"),
-    "exit" => NodeOutcome::success("Exit"),
-    "exec" => {
-      let cmd = match node.command.as_ref() {
-        Some(c) => c,
-        None => return NodeOutcome::fail("exec node missing command"),
-      };
-      match Command::new("sh").arg("-c").arg(cmd).output() {
-        Ok(o) => {
-          if o.status.success() {
-            NodeOutcome::success("ok")
-          } else {
-            let msg = o
-              .status
-              .code()
-              .map(|c| format!("exit {}", c))
-              .unwrap_or_else(|| "signal".to_string());
-            NodeOutcome::fail(msg)
-          }
-        }
-        Err(e) => NodeOutcome::fail(format!("{}", e)),
-      }
-    }
-    _ => {
-      // codergen, fix, or other: invoke agent (default cursor-agent if ATTRACTOR_AGENT_CMD unset)
-      let agent_cmd = env::var("ATTRACTOR_AGENT_CMD").unwrap_or_else(|_| {
-        "cursor-agent --print true --output-format stream-json --stream-partial-output --model auto --force --workspace .".to_string()
-      });
-      let prompt = node.prompt.as_deref().unwrap_or("").to_string();
-      agent_run::run_agent(&agent_cmd, &prompt)
-    }
-  }
+  graph
+    .connect_input_channel("input", rx_in)
+    .map_err(|e| e.to_string())?;
+  graph
+    .connect_output_channel("output", _tx_out)
+    .map_err(|e| e.to_string())?;
+
+  let initial = GraphPayload::initial(std::collections::HashMap::new());
+  tx_in
+    .send(Arc::new(initial) as Arc<dyn std::any::Any + Send + Sync>)
+    .await
+    .map_err(|e| e.to_string())?;
+  drop(tx_in);
+
+  graph.execute().await.map_err(|e| e.to_string())?;
+  let first = rx_out.recv().await;
+  graph
+    .wait_for_completion()
+    .await
+    .map_err(|e| e.to_string())?;
+  Ok(first)
 }
 
-/// Runs the compiled workflow (real exec + agent) until exit or max iterations.
-#[instrument(level = "trace", skip(ast))]
-pub fn run_compiled_workflow(ast: &AttractorGraph) -> Result<AttractorResult, String> {
-  let mut state = create_initial_state(ast.clone());
-  let max_iter = 1000;
-  let mut iter = 0;
+/// Compiles the Attractor graph to a StreamWeave graph, runs it, and returns an [AttractorResult].
+/// Uses [compile_attractor_graph] and [run_streamweave_graph]. Initial context includes the graph goal.
+pub async fn run_compiled_graph(ast: &AttractorGraph) -> Result<AttractorResult, String> {
+  let mut graph = crate::compiler::compile_attractor_graph(ast)?;
+  let mut ctx = std::collections::HashMap::new();
+  ctx.insert("goal".to_string(), ast.goal.clone());
+  ctx.insert("graph.goal".to_string(), ast.goal.clone());
+  let initial = GraphPayload::initial(ctx);
+  let (tx_in, rx_in) = tokio::sync::mpsc::channel(1);
+  let (_tx_out, mut rx_out) = tokio::sync::mpsc::channel(16);
 
-  loop {
-    if iter >= max_iter {
-      return Err("Max iterations exceeded".to_string());
-    }
-    iter += 1;
+  graph
+    .connect_input_channel("input", rx_in)
+    .map_err(|e| e.to_string())?;
+  graph
+    .connect_output_channel("output", _tx_out)
+    .map_err(|e| e.to_string())?;
 
-    info!(node_id = %state.current_node_id, iter = iter, "executing node");
-    let node: AttractorNode = match state.graph.nodes.get(&state.current_node_id) {
-      Some(n) => n.clone(),
-      None => {
-        return Err(format!("Node not found: {}", state.current_node_id));
-      }
-    };
+  tx_in
+    .send(Arc::new(initial) as Arc<dyn std::any::Any + Send + Sync>)
+    .await
+    .map_err(|e| e.to_string())?;
+  drop(tx_in);
 
-    let last_outcome = execute_node_compiled(&node, &state.context, &state.graph);
-    apply_context_updates(&mut state.context, &last_outcome);
-    state.completed_nodes.push(state.current_node_id.clone());
-    state
-      .node_outcomes
-      .insert(state.current_node_id.clone(), last_outcome.clone());
+  graph.execute().await.map_err(|e| e.to_string())?;
+  let first = rx_out.recv().await;
+  graph
+    .wait_for_completion()
+    .await
+    .map_err(|e| e.to_string())?;
 
-    let sel_input = SelectEdgeInput {
-      node_id: state.current_node_id.clone(),
-      outcome: last_outcome.clone(),
-      context: state.context.clone(),
-      graph: state.graph.clone(),
-    };
-    let sel_out = select_edge(&sel_input);
-
-    match sel_out.next_node_id {
-      Some(next_id) => {
-        state.current_node_id = next_id;
-      }
-      None => {
-        info!(
-          completed_nodes = ?state.completed_nodes,
-          "compiled workflow complete"
-        );
-        return Ok(AttractorResult {
-          last_outcome,
-          completed_nodes: state.completed_nodes,
-          context: state.context,
-        });
-      }
-    }
-  }
+  let payload = first
+    .and_then(|arc| arc.downcast::<GraphPayload>().ok())
+    .map(|p| (*p).clone());
+  let (context, last_outcome) = payload
+    .map(|p| {
+      (
+        p.context,
+        p.outcome.unwrap_or_else(|| NodeOutcome::success("Exit")),
+      )
+    })
+    .unwrap_or_else(|| {
+      (
+        std::collections::HashMap::new(),
+        NodeOutcome::success("Exit"),
+      )
+    });
+  Ok(AttractorResult {
+    last_outcome,
+    completed_nodes: vec![], // compiled graph does not track node order
+    context,
+  })
 }

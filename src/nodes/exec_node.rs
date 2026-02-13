@@ -1,5 +1,8 @@
 //! Exec node: runs a shell command, succeeds on exit 0, fails otherwise.
+//! Accepts GraphPayload (passes context), applies context_updates from outcome, emits GraphPayload.
 
+use crate::nodes::apply_context_updates::{ApplyContextUpdatesInput, apply_updates};
+use crate::types::{GraphPayload, NodeOutcome, RunContext};
 use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
@@ -10,8 +13,6 @@ use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
-
-use crate::types::NodeOutcome;
 
 /// Node that runs a shell command and emits NodeOutcome.
 pub struct ExecNode {
@@ -68,7 +69,12 @@ impl Node for ExecNode {
       let (_err_tx, err_rx) = mpsc::channel(16);
       tokio::spawn(async move {
         let mut s = in_stream;
-        while s.next().await.is_some() {
+        while let Some(item) = s.next().await {
+          let context: RunContext = item
+            .downcast::<GraphPayload>()
+            .ok()
+            .map(|p| p.context.clone())
+            .unwrap_or_default();
           let outcome = tokio::task::spawn_blocking({
             let c = cmd.clone();
             move || match Command::new("sh").arg("-c").arg(&c).output() {
@@ -84,8 +90,13 @@ impl Node for ExecNode {
           })
           .await
           .unwrap_or_else(|e| NodeOutcome::fail(format!("{}", e)));
+          let updated = apply_updates(&ApplyContextUpdatesInput {
+            context: context.clone(),
+            outcome: outcome.clone(),
+          });
+          let payload = GraphPayload::new(updated, Some(outcome));
           let _ = out_tx
-            .send(Arc::new(outcome) as Arc<dyn Any + Send + Sync>)
+            .send(Arc::new(payload) as Arc<dyn Any + Send + Sync>)
             .await;
         }
       });

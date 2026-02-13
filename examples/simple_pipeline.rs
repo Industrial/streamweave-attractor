@@ -1,8 +1,9 @@
-//! Run a simple Attractor pipeline via the compiled workflow.
+//! Run a simple Attractor pipeline via the compiled graph.
 
-use streamweave_attractor::{dot_parser, run_compiled_workflow};
+use streamweave_attractor::{dot_parser, run_compiled_graph};
 
-fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
   let dot = r#"
     digraph Simple {
       graph [goal="Run tests and report"]
@@ -18,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
   "#;
 
   let ast = dot_parser::parse_dot(dot)?;
-  let r = run_compiled_workflow(&ast)?;
+  let r = run_compiled_graph(&ast).await?;
 
   println!("Pipeline completed.");
   println!("  Status: {:?}", r.last_outcome.status);

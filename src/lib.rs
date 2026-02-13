@@ -26,5 +26,5 @@ pub mod types;
 
 pub use compiler::compile_attractor_graph;
 pub use nodes::AttractorResult;
-pub use runner::run_compiled_workflow;
+pub use runner::{run_compiled_graph, run_streamweave_graph};
 pub use types::{AttractorGraph, AttractorNode, ExecutionState, NodeOutcome};

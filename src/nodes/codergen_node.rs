@@ -1,6 +1,9 @@
 //! Codergen node: runs ATTRACTOR_AGENT_CMD (or default cursor-agent) with prompt as stdin,
-//! emits NodeOutcome from exit code and outcome.json context_updates.
+//! emits GraphPayload with NodeOutcome and updated context (context_updates applied).
 
+use crate::agent_run;
+use crate::nodes::apply_context_updates::{ApplyContextUpdatesInput, apply_updates};
+use crate::types::{GraphPayload, NodeOutcome, RunContext};
 use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
@@ -11,9 +14,6 @@ use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
-
-use crate::agent_run;
-use crate::types::NodeOutcome;
 
 /// Node that runs the agent command with prompt as stdin and emits NodeOutcome.
 pub struct CodergenNode {
@@ -73,14 +73,24 @@ impl Node for CodergenNode {
       });
       tokio::spawn(async move {
         let mut s = in_stream;
-        while s.next().await.is_some() {
+        while let Some(item) = s.next().await {
+          let context: RunContext = item
+            .downcast::<GraphPayload>()
+            .ok()
+            .map(|p| p.context.clone())
+            .unwrap_or_default();
           let cmd = agent_cmd.clone();
           let p = prompt.clone();
           let outcome = tokio::task::spawn_blocking(move || agent_run::run_agent(&cmd, &p))
             .await
             .unwrap_or_else(|e| NodeOutcome::fail(format!("{}", e)));
+          let updated = apply_updates(&ApplyContextUpdatesInput {
+            context: context.clone(),
+            outcome: outcome.clone(),
+          });
+          let payload = GraphPayload::new(updated, Some(outcome));
           let _ = out_tx
-            .send(Arc::new(outcome) as Arc<dyn Any + Send + Sync>)
+            .send(Arc::new(payload) as Arc<dyn Any + Send + Sync>)
             .await;
         }
       });
