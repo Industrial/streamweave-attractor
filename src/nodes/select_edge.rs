@@ -109,7 +109,7 @@ pub(crate) fn select_edge(input: &SelectEdgeInput) -> SelectEdgeOutput {
   }
 }
 
-/// Evaluates a condition string (e.g. `outcome=Success`, `outcome!=Fail`) against context.
+/// Evaluates a condition string (e.g. `outcome=Success`, `has_tasks=true`) against context.
 #[instrument(level = "trace", skip(_outcome, context))]
 pub(crate) fn evaluate_condition(cond: &str, _outcome: &NodeOutcome, context: &RunContext) -> bool {
   let cond = cond.trim();
@@ -122,6 +122,17 @@ pub(crate) fn evaluate_condition(cond: &str, _outcome: &NodeOutcome, context: &R
   if let Some(stripped) = cond.strip_prefix("outcome!=") {
     let outcome_str = context.get("outcome").map(|s| s.as_str()).unwrap_or("");
     return !stripped.eq_ignore_ascii_case(outcome_str);
+  }
+  // Generic key=value: context key must equal value
+  if let Some((key, value)) = cond.split_once('=') {
+    let key = key.trim();
+    let value = value.trim();
+    if !key.is_empty() {
+      return context
+        .get(key)
+        .map(|v| v.as_str() == value || value.eq_ignore_ascii_case(v))
+        .unwrap_or(false);
+    }
   }
   false
 }

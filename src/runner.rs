@@ -2,17 +2,40 @@
 //!
 //! Handles cycles (fix-and-retry) via a Rust loop; StreamWeave graphs are DAG-only.
 //! - Exec nodes: run shell command (success on exit 0)
-//! - Codergen/fix nodes: when ATTRACTOR_AGENT_CMD is set, invoke that agent with prompt as stdin
+//! - Codergen/fix nodes: invoke ATTRACTOR_AGENT_CMD (or default cursor-agent) with prompt as stdin
 
-use crate::nodes::execute_handler::build_codergen_outcome;
 use crate::nodes::execution_loop::{AttractorResult, apply_context_updates};
 use crate::nodes::init_context::create_initial_state;
 use crate::nodes::select_edge::{SelectEdgeInput, select_edge};
 use crate::types::{AttractorGraph, AttractorNode, NodeOutcome, RunContext};
+use std::collections::HashMap;
 use std::env;
+use std::fs;
 use std::io::Write;
 use std::process::Command;
 use tracing::{info, instrument};
+
+/// Reads outcome.json from stage_dir (or ATTRACTOR_STAGE_DIR or .) and returns context_updates.
+pub(crate) fn read_outcome_json(stage_dir: Option<&str>) -> Option<HashMap<String, String>> {
+  let base = stage_dir
+    .map(std::path::PathBuf::from)
+    .or_else(|| env::var("ATTRACTOR_STAGE_DIR").ok().map(std::path::PathBuf::from))
+    .unwrap_or_else(|| std::path::PathBuf::from("."));
+  let path = base.join("outcome.json");
+  if !path.exists() {
+    return None;
+  }
+  let s = fs::read_to_string(&path).ok()?;
+  let v: serde_json::Value = serde_json::from_str(&s).ok()?;
+  let obj = v.get("context_updates")?.as_object()?;
+  let mut map = HashMap::new();
+  for (k, v) in obj {
+    if let Some(s) = v.as_str() {
+      map.insert(k.clone(), s.to_string());
+    }
+  }
+  Some(map)
+}
 
 /// Executes a single node using compiled semantics (real exec, agent when ATTRACTOR_AGENT_CMD set).
 #[instrument(level = "trace", skip(node, _context, _graph))]
@@ -48,13 +71,12 @@ pub fn execute_node_compiled(
       }
     }
     _ => {
-      // codergen, fix, or other
-      if let Ok(agent_cmd) = env::var("ATTRACTOR_AGENT_CMD") {
-        let prompt = node.prompt.as_deref().unwrap_or("").to_string();
-        run_agent(&agent_cmd, &prompt)
-      } else {
-        build_codergen_outcome(node)
-      }
+      // codergen, fix, or other: invoke agent (default cursor-agent if ATTRACTOR_AGENT_CMD unset)
+      let agent_cmd = env::var("ATTRACTOR_AGENT_CMD").unwrap_or_else(|_| {
+        "cursor-agent --print true --output-format stream-json --stream-partial-output --model auto --force --workspace .".to_string()
+      });
+      let prompt = node.prompt.as_deref().unwrap_or("").to_string();
+      run_agent(&agent_cmd, &prompt)
     }
   }
 }
@@ -82,7 +104,11 @@ fn run_agent(agent_cmd: &str, prompt: &str) -> NodeOutcome {
       match child.wait() {
         Ok(status) => {
           if status.success() {
-            NodeOutcome::success("agent completed")
+            let mut outcome = NodeOutcome::success("agent completed");
+            if let Some(updates) = read_outcome_json(None) {
+              outcome.context_updates = updates;
+            }
+            outcome
           } else {
             let msg = status
               .code()

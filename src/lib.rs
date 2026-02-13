@@ -7,14 +7,9 @@
 //!
 //! All pipeline logic is implemented as StreamWeave nodes:
 //!
-//! - **ParseDotNode**: Parse DOT source → AttractorGraph
-//! - **ValidateGraphNode**: Validate graph (start/exit nodes)
-//! - **InitContextNode**: Initialize ExecutionState
-//! - **AttractorExecutionLoopNode**: Run traversal loop until terminal
-//!
-//! Supporting nodes (used internally or for composition):
-//! - ExecuteHandlerNode, SelectEdgeNode, ApplyContextUpdatesNode,
-//!   CheckGoalGatesNode, CreateCheckpointNode, FindStartNode
+//! Pipeline logic is implemented as StreamWeave nodes (see `nodes` module).
+//! Supporting nodes: ApplyContextUpdatesNode, CheckGoalGatesNode,
+//! CreateCheckpointNode, FindStartNode, etc.
 
 pub mod compiler;
 #[cfg(test)]
@@ -27,10 +22,12 @@ pub mod graph;
 mod graph_test;
 pub mod nodes;
 pub mod runner;
+#[cfg(test)]
+mod runner_test;
 pub mod types;
 
 pub use compiler::compile_attractor_graph;
 pub use graph::attractor_graph;
-pub use nodes::{AttractorExecutionLoopNode, AttractorResult};
+pub use nodes::AttractorResult;
 pub use runner::run_compiled_workflow;
 pub use types::{AttractorGraph, AttractorNode, ExecutionState, NodeOutcome};

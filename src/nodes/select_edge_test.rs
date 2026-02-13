@@ -47,6 +47,56 @@ fn evaluate_condition_outcome_equals() {
 }
 
 #[test]
+fn evaluate_condition_has_tasks_true() {
+  let mut ctx = HashMap::new();
+  ctx.insert("has_tasks".to_string(), "true".to_string());
+  let o = NodeOutcome::success("ok");
+  assert!(evaluate_condition("has_tasks=true", &o, &ctx));
+}
+
+#[test]
+fn evaluate_condition_has_tasks_false() {
+  let mut ctx = HashMap::new();
+  ctx.insert("has_tasks".to_string(), "false".to_string());
+  let o = NodeOutcome::success("ok");
+  assert!(evaluate_condition("has_tasks=false", &o, &ctx));
+}
+
+#[test]
+fn select_by_condition_has_tasks() {
+  let mut ctx = HashMap::new();
+  ctx.insert("has_tasks".to_string(), "true".to_string());
+  ctx.insert("ready_task_id".to_string(), "bd-42".to_string());
+  let g = graph(
+    vec![node("check", "box"), node("claim", "box"), node("exit", "Msquare")],
+    vec![
+      AttractorEdge {
+        from_node: "check".to_string(),
+        to_node: "claim".to_string(),
+        label: None,
+        condition: Some("has_tasks=true".to_string()),
+        weight: 0,
+      },
+      AttractorEdge {
+        from_node: "check".to_string(),
+        to_node: "exit".to_string(),
+        label: None,
+        condition: Some("has_tasks=false".to_string()),
+        weight: 0,
+      },
+    ],
+  );
+  let input = SelectEdgeInput {
+    node_id: "check".to_string(),
+    outcome: NodeOutcome::success("ok"),
+    context: ctx,
+    graph: g,
+  };
+  let out = select_edge(&input);
+  assert_eq!(out.next_node_id.as_deref(), Some("claim"));
+}
+
+#[test]
 fn normalize_label_strips_prefixes() {
   let n = normalize_label("  [Yes]-x  ");
   assert!(n.contains("x"));
