@@ -1,7 +1,7 @@
 digraph AIFeature {
   graph [
-    goal="AI-driven feature workflow: explore ideas, implement the idea, create branch, commit, pre-commit, test coverage; fix-and-retry until complete",
-    label="AI Feature: explore → implement → branch → commit → pre-commit ⟲ fix → test-coverage ⟲ fix → exit"
+    goal="AI-driven feature workflow: explore ideas, implement the idea, create branch, commit, pre-push, test coverage; fix-and-retry until complete; ensure clean then push and checkout main",
+    label="AI Feature: explore → implement → branch → commit → pre-push ⟲ fix → test-coverage ⟲ fix → ensure clean → push → checkout main → exit"
   ]
   rankdir=LR
 
@@ -36,17 +36,17 @@ digraph AIFeature {
     command="git add -A && (git diff --cached --quiet && true || git commit -m \"WIP: AI feature exploration\")"
   ]
 
-  pre_commit [
+  pre_push [
     shape=box,
     type=exec,
-    label="Pre-commit checks",
+    label="Pre-push checks",
     command="devenv shell -- sh -c 'bin/format && bin/lint && bin/check'"
   ]
 
-  fix_pre_commit [
+  fix_pre_push [
     shape=box,
-    label="Fix (pre-commit)",
-    prompt="Pre-commit failed (format, lint, or check). From the output, identify failures. Create small bd tasks: devenv shell -- bd create \"...\" -t task -p 1 --json. Act as beads-worker: bd ready, claim one task, fix it, bd close, commit. Exit 0; pipeline returns to pre-commit."
+    label="Fix (pre-push)",
+    prompt="Pre-push failed (format, lint, or check). From the output, identify failures. Create small bd tasks: devenv shell -- bd create \"...\" -t task -p 1 --json. Act as beads-worker: bd ready, claim one task, fix it, bd close, commit. Exit 0; pipeline returns to pre-push."
   ]
 
   test_coverage [
@@ -62,15 +62,40 @@ digraph AIFeature {
     prompt="bin/test-coverage failed. From the output, identify coverage or test failures. Create small bd tasks: devenv shell -- bd create \"...\" -t task -p 1 --json. Act as beads-worker: bd ready, claim one task, fix it, bd close, commit. Exit 0; pipeline returns to bin/test-coverage."
   ]
 
+  ensure_clean [
+    shape=box,
+    type=exec,
+    label="Ensure working tree clean",
+    command="git status --porcelain | grep -q . && exit 1 || exit 0"
+  ]
+
+  git_push [
+    shape=box,
+    type=exec,
+    label="Git push",
+    command="git push"
+  ]
+
+  checkout_main [
+    shape=box,
+    type=exec,
+    label="Checkout main branch",
+    command="git checkout main"
+  ]
+
   start -> explore_ideas
-  explore_ideas -> create_branch
-  create_branch -> implement_idea
-  implement_idea -> commit
-  commit -> pre_commit
-  pre_commit -> test_coverage [label="success", condition="outcome=success"]
-  pre_commit -> fix_pre_commit [label="failure", condition="outcome=fail"]
-  fix_pre_commit -> pre_commit
-  test_coverage -> exit [label="success", condition="outcome=success"]
+  explore_ideas -> implement_idea
+  implement_idea -> create_branch
+  create_branch -> commit
+  commit -> pre_push
+  pre_push -> test_coverage [label="success", condition="outcome=success"]
+  pre_push -> fix_pre_push [label="failure", condition="outcome=fail"]
+  fix_pre_push -> pre_push
+  test_coverage -> ensure_clean [label="success", condition="outcome=success"]
   test_coverage -> fix_test_coverage [label="failure", condition="outcome=fail"]
   fix_test_coverage -> test_coverage
+  ensure_clean -> git_push [label="success", condition="outcome=success"]
+  ensure_clean -> commit [label="failure", condition="outcome=fail"]
+  git_push -> checkout_main
+  checkout_main -> exit
 }
