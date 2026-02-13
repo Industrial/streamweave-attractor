@@ -37,7 +37,7 @@ path = "src/bin/run_dot.rs"
 proptest = "1.5"
 tempfile = "3.10"
 tokio-test = "0.4.2"
-criterion = { version = "0.5", features = ["async_tokio"] }
+criterion = { version = "0.8", features = ["async_tokio"] }
 tracing-subscriber = "0.3"
 
 [lints.rust]
