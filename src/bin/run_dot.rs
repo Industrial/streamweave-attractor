@@ -6,19 +6,20 @@
 //! Usage: `run_dot PATH`
 //! Example: run_dot examples/workflows/pre-push.dot
 //!
-//! Set RUST_LOG=trace to see trace-level logs, e.g. `RUST_LOG=trace run_dot path.dot`
+//! Set RUST_LOG=streamweave_attractor=trace for TRACE-level span enter/exit and events.
 
 use std::env;
 use std::fs;
 use std::process;
 use streamweave_attractor::{dot_parser, run_compiled_workflow};
 use tracing::info;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
 #[tokio::main]
 async fn main() {
   tracing_subscriber::fmt()
     .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+    .with_span_events(FmtSpan::ENTER | FmtSpan::EXIT)
     .init();
 
   info!("run_dot starting");

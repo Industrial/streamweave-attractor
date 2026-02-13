@@ -24,8 +24,8 @@ pub fn execute_node_compiled(
   let handler = node.handler_type.as_deref().unwrap_or("codergen");
 
   match handler {
-    "start" => return NodeOutcome::success("Start"),
-    "exit" => return NodeOutcome::success("Exit"),
+    "start" => NodeOutcome::success("Start"),
+    "exit" => NodeOutcome::success("Exit"),
     "exec" => {
       let cmd = match node.command.as_ref() {
         Some(c) => c,
@@ -49,7 +49,7 @@ pub fn execute_node_compiled(
     }
     _ => {
       // codergen, fix, or other
-      if let Some(agent_cmd) = env::var("ATTRACTOR_AGENT_CMD").ok() {
+      if let Ok(agent_cmd) = env::var("ATTRACTOR_AGENT_CMD") {
         let prompt = node.prompt.as_deref().unwrap_or("").to_string();
         run_agent(&agent_cmd, &prompt)
       } else {
