@@ -11,6 +11,7 @@
 //! Supporting nodes: ApplyContextUpdatesNode, CheckGoalGatesNode,
 //! CreateCheckpointNode, FindStartNode, etc.
 
+pub(crate) mod agent_run;
 pub mod compiler;
 #[cfg(test)]
 mod compiler_test;

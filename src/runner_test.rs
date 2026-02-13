@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use crate::runner::read_outcome_json;
+use crate::agent_run::read_outcome_json;
 
 #[test]
 fn read_outcome_json_returns_context_updates() {

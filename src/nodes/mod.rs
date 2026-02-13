@@ -6,6 +6,7 @@ mod apply_context_updates_test;
 mod check_goal_gates;
 #[cfg(test)]
 mod check_goal_gates_test;
+mod codergen_node;
 mod create_checkpoint;
 #[cfg(test)]
 mod create_checkpoint_test;
@@ -37,6 +38,7 @@ mod validate_graph_test;
 
 pub use apply_context_updates::ApplyContextUpdatesNode;
 pub use check_goal_gates::CheckGoalGatesNode;
+pub use codergen_node::CodergenNode;
 pub use create_checkpoint::CreateCheckpointNode;
 pub use exec_node::ExecNode;
 pub use execution_loop::AttractorExecutionLoopNode;

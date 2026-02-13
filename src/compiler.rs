@@ -1,10 +1,12 @@
 //! Compile AttractorGraph (AST) to StreamWeave graph.
 //!
 //! Phase 1: Trivial start→exit with identity nodes.
-//! Phase 2: ExecNode for exec handlers, identity for start/exit, stub for codergen.
+//! Phase 2: ExecNode for exec, CodergenNode for codergen, identity for start/exit.
 //! Phase 3: Conditional routing (outcome=success / outcome=fail) via OutcomeRouterNode.
 
-use crate::nodes::{ExecNode, FixNode, IdentityNode, OutcomeRouterNode, validate_graph};
+use crate::nodes::{
+  CodergenNode, ExecNode, FixNode, IdentityNode, OutcomeRouterNode, validate_graph,
+};
 use crate::types::AttractorGraph;
 use streamweave::graph_builder::GraphBuilder;
 use streamweave::node::Node;
@@ -36,7 +38,7 @@ fn condition_is_outcome_fail(cond: Option<&str>) -> bool {
 ///
 /// - Start/exit: IdentityNode (pass-through)
 /// - Exec nodes: ExecNode with command (rejects exec without command per design §2.2)
-/// - Codergen/other: IdentityNode stub
+/// - Codergen/other: CodergenNode (invokes ATTRACTOR_AGENT_CMD with prompt)
 #[instrument(level = "trace", skip(ast))]
 pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::graph::Graph, String> {
   info!("compiling AttractorGraph to StreamWeave graph");
@@ -78,7 +80,8 @@ pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::grap
         if fix_node_ids.contains(node_id) {
           Box::new(FixNode::new(&node.id))
         } else {
-          Box::new(IdentityNode::new(&node.id)) // codergen stub
+          let prompt = node.prompt.as_deref().unwrap_or("").to_string();
+          Box::new(CodergenNode::new(&node.id, prompt))
         }
       }
     };
