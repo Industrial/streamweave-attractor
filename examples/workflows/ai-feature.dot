@@ -1,7 +1,7 @@
 digraph AIFeature {
   graph [
-    goal="AI-driven feature workflow: explore ideas, create branch, commit, pre-commit, test coverage; fix-and-retry until complete",
-    label="AI Feature: explore → branch → commit → pre-commit ⟲ fix → test-coverage ⟲ fix → exit"
+    goal="AI-driven feature workflow: explore ideas, implement the idea, create branch, commit, pre-commit, test coverage; fix-and-retry until complete",
+    label="AI Feature: explore → implement → branch → commit → pre-commit ⟲ fix → test-coverage ⟲ fix → exit"
   ]
   rankdir=LR
 
@@ -12,7 +12,14 @@ digraph AIFeature {
     shape=box,
     type=codergen,
     label="Explore ideas (AI)",
-    prompt="Explore new ideas for the project. Suggest a concrete feature to implement, outline implementation steps, and propose a feature branch name (e.g. feature/add-X). Output your plan. The pipeline will create the branch and proceed with commits."
+    prompt="Explore new ideas for the project. Suggest a concrete feature to implement, outline implementation steps, and propose a feature branch name (e.g. feature/add-X). Output your plan. The pipeline will then implement the idea, create the branch, and commit."
+  ]
+
+  implement_idea [
+    shape=box,
+    type=codergen,
+    label="Implement explored idea",
+    prompt="Implement the feature or plan from the previous exploration step. Follow the outline and steps that were proposed. Make the code changes; add or update tests as needed. Do not create the branch or commit yet—the pipeline will do that next. Exit 0 when implementation is done."
   ]
 
   create_branch [
@@ -57,7 +64,8 @@ digraph AIFeature {
 
   start -> explore_ideas
   explore_ideas -> create_branch
-  create_branch -> commit
+  create_branch -> implement_idea
+  implement_idea -> commit
   commit -> pre_commit
   pre_commit -> test_coverage [label="success", condition="outcome=success"]
   pre_commit -> fix_pre_commit [label="failure", condition="outcome=fail"]
