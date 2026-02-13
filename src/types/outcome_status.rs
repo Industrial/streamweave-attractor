@@ -7,7 +7,7 @@ use std::fmt;
 pub enum OutcomeStatus {
   Success,
   PartialSuccess,
-  Error,  // was Fail
+  Error, // was Fail
   Retry,
 }
 

@@ -19,8 +19,10 @@ fn condition_is_outcome_error(cond: Option<&str>) -> bool {
   cond
     .map(|c| {
       let c = c.trim().to_lowercase();
-      c == "outcome=fail" || c.starts_with("outcome=fail")
-      || c == "outcome=error" || c.starts_with("outcome=error")
+      c == "outcome=fail"
+        || c.starts_with("outcome=fail")
+        || c == "outcome=error"
+        || c.starts_with("outcome=error")
     })
     .unwrap_or(false)
 }
@@ -108,13 +110,21 @@ pub fn compile_attractor_graph(
       } else {
         ("out".to_string(), "in".to_string())
       };
-      (e.from_node.clone(), source_port, e.to_node.clone(), target_port)
+      (
+        e.from_node.clone(),
+        source_port,
+        e.to_node.clone(),
+        target_port,
+      )
     })
     .collect();
   let mut groups: HashMap<(String, String), Vec<(String, String)>> = HashMap::new();
   for (from, src_port, to, to_port) in &resolved {
     let key = (to.clone(), to_port.clone());
-    groups.entry(key).or_default().push((from.clone(), src_port.clone()));
+    groups
+      .entry(key)
+      .or_default()
+      .push((from.clone(), src_port.clone()));
   }
   for ((to_node, to_port), list) in &groups {
     if list.len() > 1 {

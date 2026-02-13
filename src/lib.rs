@@ -12,7 +12,6 @@
 //! CreateCheckpointNode, FindStartNode, etc.
 
 pub(crate) mod agent_run;
-pub mod graphs;
 pub mod checkpoint_io;
 #[cfg(test)]
 mod checkpoint_io_test;
@@ -22,6 +21,7 @@ mod compiler_test;
 pub mod dot_parser;
 #[cfg(test)]
 mod dot_parser_test;
+pub mod graphs;
 pub mod nodes;
 pub mod runner;
 #[cfg(test)]

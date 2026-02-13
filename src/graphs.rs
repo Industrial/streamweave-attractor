@@ -6,7 +6,6 @@
 use crate::nodes::IdentityNode;
 use streamweave::graph::Graph;
 
-
 /// Trivial start→exit pipeline: one identity from input to output.
 ///
 /// Node names are `start` and `exit` to match the Attractor convention.

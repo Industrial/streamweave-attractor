@@ -105,13 +105,19 @@ impl Node for ExecNode {
           completed.push(name.clone());
           let payload = GraphPayload::new(updated, Some(outcome), name.clone(), completed);
           let arc = Arc::new(payload) as Arc<dyn Any + Send + Sync>;
-          let _ = if is_success {
+          // Drop unused sender immediately so its stream ends; prevents merge nodes from
+          // waiting forever when we take one branch (e.g. success) but the other (error)
+          // feeds a merge (e.g. fix_X -> merge -> same node).
+          if is_success {
             tracing::info!(node = %name, "finished: success");
-            out_tx.send(arc).await
+            let _ = out_tx.send(arc).await;
+            drop(err_tx);
           } else {
             tracing::info!(node = %name, "finished: error");
-            err_tx.send(arc).await
-          };
+            let _ = err_tx.send(arc).await;
+            drop(out_tx);
+          }
+          break; // One item per run; drop unused so merge nodes don't deadlock
         }
       });
       let mut outputs = HashMap::new();
