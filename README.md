@@ -23,6 +23,25 @@ The authoritative Attractor specs live in the upstream repo:
 
 ### Running via CLI
 
+**`run_dot`** runs an Attractor pipeline from a `.dot` file (parse → validate → run):
+
+```bash
+devenv shell -- cargo run --bin run_dot -- examples/workflows/pre-push.dot
+```
+
+Options:
+
+- **`--run-dir DIR`** — Write a checkpoint to `DIR/checkpoint.json` on successful exit. Use this to save run state so you can resume later.
+- **`--resume DIR`** — Resume from a checkpoint in `DIR` (loads `DIR/checkpoint.json`). Run with the same `.dot` file; the pipeline continues from the saved state.
+
+Checkpoints are saved only at successful pipeline exit (no mid-run crash recovery in this version). Example:
+
+```bash
+devenv shell -- cargo run --bin run_dot -- --run-dir .attractor_run examples/workflows/pre-push.dot
+# later:
+devenv shell -- cargo run --bin run_dot -- --resume .attractor_run examples/workflows/pre-push.dot
+```
+
 The main entry point is the `simple_pipeline` example, which runs a minimal Attractor graph (Run tests → Report). You can run it in several ways:
 
 | Method | Command | Notes |

@@ -1,6 +1,6 @@
 //! Run a simple Attractor pipeline via the compiled graph.
 
-use streamweave_attractor::{dot_parser, run_compiled_graph};
+use streamweave_attractor::{dot_parser, run_compiled_graph, RunOptions};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -19,7 +19,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
   "#;
 
   let ast = dot_parser::parse_dot(dot)?;
-  let r = run_compiled_graph(&ast).await?;
+  let r = run_compiled_graph(
+    &ast,
+    RunOptions {
+      run_dir: None,
+      resume_checkpoint: None,
+    },
+  )
+  .await?;
 
   println!("Pipeline completed.");
   println!("  Status: {:?}", r.last_outcome.status);

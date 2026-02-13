@@ -58,7 +58,7 @@ pub async fn run_compiled_graph(
   options: RunOptions<'_>,
 ) -> Result<AttractorResult, String> {
   let entry_node_id = options.resume_checkpoint.map(|cp| cp.current_node_id.as_str());
-  let graph = crate::compiler::compile_attractor_graph(ast, entry_node_id)?;
+  let mut graph = crate::compiler::compile_attractor_graph(ast, entry_node_id)?;
 
   let initial = match options.resume_checkpoint {
     Some(cp) => GraphPayload::from_checkpoint(cp),

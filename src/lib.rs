@@ -13,6 +13,8 @@
 
 pub(crate) mod agent_run;
 pub mod checkpoint_io;
+#[cfg(test)]
+mod checkpoint_io_test;
 pub mod compiler;
 #[cfg(test)]
 mod compiler_test;
@@ -27,5 +29,5 @@ pub mod types;
 
 pub use compiler::compile_attractor_graph;
 pub use nodes::AttractorResult;
-pub use runner::{run_compiled_graph, run_streamweave_graph};
+pub use runner::{run_compiled_graph, run_streamweave_graph, RunOptions};
 pub use types::{AttractorGraph, AttractorNode, ExecutionState, NodeOutcome};

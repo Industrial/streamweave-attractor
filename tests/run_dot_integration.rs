@@ -84,11 +84,62 @@ async fn pre_push_dot_via_run_compiled_graph() {
     }
   "#;
   let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
-  let result = streamweave_attractor::run_compiled_graph(&ast)
-    .await
-    .expect("run_compiled_graph");
+  let result = streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: None,
+      resume_checkpoint: None,
+    },
+  )
+  .await
+  .expect("run_compiled_graph");
   assert!(
     !result.context.is_empty() || result.last_outcome.notes.is_some(),
     "expected context or outcome notes"
+  );
+}
+
+/// Run pipeline with --run-dir, then resume from that checkpoint via library.
+#[tokio::test]
+async fn run_dir_writes_checkpoint_resume_completes() {
+  let dot = r#"
+    digraph G {
+      graph [goal="resume-test"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      start -> exit
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let run_dir = tempfile::tempdir().expect("temp dir");
+
+  streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: Some(run_dir.path()),
+      resume_checkpoint: None,
+    },
+  )
+  .await
+  .expect("run_compiled_graph");
+
+  let cp_path = run_dir.path().join("checkpoint.json");
+  assert!(cp_path.exists(), "checkpoint.json should exist after run with run_dir");
+  let cp = streamweave_attractor::checkpoint_io::load_checkpoint(&cp_path).expect("load checkpoint");
+  assert_eq!(cp.context.get("goal").map(String::as_str), Some("resume-test"));
+  assert!(!cp.completed_nodes.is_empty() || !cp.current_node_id.is_empty());
+
+  let resumed = streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: None,
+      resume_checkpoint: Some(&cp),
+    },
+  )
+  .await
+  .expect("run_compiled_graph resume");
+  assert!(
+    format!("{:?}", resumed.last_outcome.status) == "Success",
+    "resumed run should complete successfully"
   );
 }

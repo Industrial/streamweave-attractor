@@ -5,6 +5,22 @@ use std::collections::HashMap;
 use super::Checkpoint;
 
 #[test]
+fn checkpoint_roundtrip_serde() {
+  let mut ctx = HashMap::new();
+  ctx.insert("goal".to_string(), "build".to_string());
+  let cp = Checkpoint {
+    context: ctx,
+    current_node_id: "run".to_string(),
+    completed_nodes: vec!["start".to_string(), "run".to_string()],
+  };
+  let json = serde_json::to_string(&cp).unwrap();
+  let cp2: Checkpoint = serde_json::from_str(&json).unwrap();
+  assert_eq!(cp2.current_node_id, cp.current_node_id);
+  assert_eq!(cp2.completed_nodes, cp.completed_nodes);
+  assert_eq!(cp2.context.get("goal").map(String::as_str), Some("build"));
+}
+
+#[test]
 fn construct_checkpoint() {
   let mut ctx = HashMap::new();
   ctx.insert("key".to_string(), "val".to_string());

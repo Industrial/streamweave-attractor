@@ -66,14 +66,25 @@ impl Node for IdentityNode {
     let name = self.name.clone();
     Box::pin(async move {
       tracing::trace!(node = %name, "IdentityNode executing");
-      let mut in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
+      let Some(mut in_stream) = inputs.remove("in") else {
+        // No input connected (e.g. resume entry is another node); produce no output.
+        let (out_tx, out_rx) = tokio::sync::mpsc::channel(16);
+        drop(out_tx);
+        let mut outputs = HashMap::new();
+        outputs.insert(
+          "out".to_string(),
+          Box::pin(ReceiverStream::new(out_rx))
+            as Pin<Box<dyn futures::Stream<Item = Arc<dyn std::any::Any + Send + Sync>> + Send>>,
+        );
+        return Ok(outputs);
+      };
       let (out_tx, out_rx) = tokio::sync::mpsc::channel(16);
 
       tokio::spawn(async move {
         use futures::StreamExt;
         while let Some(item) = in_stream.next().await {
           let out_item: Arc<dyn std::any::Any + Send + Sync> =
-            if let Ok(payload) = item.downcast::<GraphPayload>() {
+            if let Ok(payload) = item.clone().downcast::<GraphPayload>() {
               Arc::new(payload.with_node_completed(&name))
             } else {
               item

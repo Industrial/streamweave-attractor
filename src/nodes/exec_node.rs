@@ -75,7 +75,7 @@ impl Node for ExecNode {
             .as_ref()
             .map(|p| p.context.clone())
             .unwrap_or_default();
-          let (current_node_id, completed_nodes) = incoming
+          let (_current_node_id, completed_nodes) = incoming
             .as_ref()
             .map(|p| (p.current_node_id.clone(), p.completed_nodes.clone()))
             .unwrap_or_else(|| (String::new(), vec![]));
