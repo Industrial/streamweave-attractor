@@ -8,6 +8,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::instrument;
 
 /// Input bundle for ExecuteHandlerNode.
 #[derive(Clone)]
@@ -42,6 +43,7 @@ impl ExecuteHandlerNode {
 }
 
 /// Builds a codergen NodeOutcome for the given node.
+#[instrument(level = "trace")]
 pub(crate) fn build_codergen_outcome(node: &AttractorNode) -> NodeOutcome {
   let mut updates = HashMap::new();
   updates.insert("last_stage".to_string(), node.id.clone());
@@ -56,6 +58,7 @@ pub(crate) fn build_codergen_outcome(node: &AttractorNode) -> NodeOutcome {
 }
 
 /// Executes the handler for the given node (start, exit, codergen stub, etc.) and returns the outcome.
+#[instrument(level = "trace", skip(input))]
 pub(crate) fn execute_handler(input: &ExecuteHandlerInput) -> Result<NodeOutcome, String> {
   let handler = input.node.handler_type.as_deref().unwrap_or("codergen");
   match handler {

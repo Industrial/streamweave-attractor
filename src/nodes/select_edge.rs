@@ -8,6 +8,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::instrument;
 
 /// Input for SelectEdgeNode.
 #[derive(Clone)]
@@ -33,6 +34,7 @@ pub struct SelectEdgeOutput {
 }
 
 /// Selects the next edge per attractor-spec §3.3 (conditions, preferred_label, weights).
+#[instrument(level = "trace", skip(input))]
 pub(crate) fn select_edge(input: &SelectEdgeInput) -> SelectEdgeOutput {
   let edges = input.graph.outgoing_edges(&input.node_id);
   if edges.is_empty() {
@@ -108,6 +110,7 @@ pub(crate) fn select_edge(input: &SelectEdgeInput) -> SelectEdgeOutput {
 }
 
 /// Evaluates a condition string (e.g. `outcome=Success`, `outcome!=Fail`) against context.
+#[instrument(level = "trace", skip(_outcome, context))]
 pub(crate) fn evaluate_condition(cond: &str, _outcome: &NodeOutcome, context: &RunContext) -> bool {
   let cond = cond.trim();
   if let Some(stripped) = cond.strip_prefix("outcome=") {
@@ -124,6 +127,7 @@ pub(crate) fn evaluate_condition(cond: &str, _outcome: &NodeOutcome, context: &R
 }
 
 /// Normalizes an edge label for comparison (lowercase, trim, strip prefixes).
+#[instrument(level = "trace")]
 pub(crate) fn normalize_label(l: &str) -> String {
   l.to_lowercase()
     .trim()
@@ -133,6 +137,7 @@ pub(crate) fn normalize_label(l: &str) -> String {
 }
 
 /// Picks the best edge by weight (descending), then lexically by to_node.
+#[instrument(level = "trace")]
 pub(crate) fn best_by_weight_then_lexical(edges: Vec<&AttractorEdge>) -> &AttractorEdge {
   let mut v: Vec<_> = edges.into_iter().collect();
   v.sort_by(|a, b| {

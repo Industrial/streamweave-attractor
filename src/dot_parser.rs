@@ -4,8 +4,10 @@
 
 use crate::types::{AttractorEdge, AttractorGraph, AttractorNode};
 use std::collections::HashMap;
+use tracing::{info, instrument};
 
 /// Parse a DOT source string into an AttractorGraph.
+#[instrument(level = "trace", skip(source))]
 pub fn parse_dot(source: &str) -> Result<AttractorGraph, String> {
   let source = strip_comments(source);
   let source = source.trim();
@@ -35,10 +37,16 @@ pub fn parse_dot(source: &str) -> Result<AttractorGraph, String> {
     remaining = remaining.trim();
   }
 
+  info!(
+    nodes = graph.nodes.len(),
+    edges = graph.edges.len(),
+    "DOT parse complete"
+  );
   Ok(graph)
 }
 
 /// Strips `//` and `/* */` style comments from DOT source.
+#[instrument(level = "trace", skip(s))]
 pub(crate) fn strip_comments(s: &str) -> String {
   let mut out = String::new();
   let mut i = 0;
@@ -67,6 +75,7 @@ pub(crate) fn strip_comments(s: &str) -> String {
 }
 
 /// Parses an identifier (alphanumeric + underscore) and returns it plus the remaining string.
+#[instrument(level = "trace", skip(s))]
 pub(crate) fn parse_identifier(s: &str) -> Option<(&str, &str)> {
   let s = s.trim_start();
   let start = s
@@ -84,6 +93,7 @@ pub(crate) fn parse_identifier(s: &str) -> Option<(&str, &str)> {
 }
 
 /// Parses a single graph statement and updates `graph`. Returns the unconsumed remainder.
+#[instrument(level = "trace", skip(graph))]
 fn parse_statement<'a>(mut s: &'a str, graph: &mut AttractorGraph) -> Result<&'a str, String> {
   s = s.trim_start();
   if s.starts_with('}') {
@@ -123,6 +133,7 @@ fn parse_statement<'a>(mut s: &'a str, graph: &mut AttractorGraph) -> Result<&'a
 }
 
 /// Applies graph-level attributes (goal, default_max_retry) to an AttractorGraph.
+#[instrument(level = "trace", skip(attrs, graph))]
 pub(crate) fn apply_graph_attrs(attrs: &[(String, String)], graph: &mut AttractorGraph) {
   for (k, v) in attrs {
     if k == "goal" {
@@ -134,6 +145,7 @@ pub(crate) fn apply_graph_attrs(attrs: &[(String, String)], graph: &mut Attracto
 }
 
 /// Parses `graph [...]` attributes (e.g. goal, default_max_retry) and updates `graph`.
+#[instrument(level = "trace", skip(graph))]
 fn parse_graph_attrs<'a>(mut s: &'a str, graph: &mut AttractorGraph) -> Result<&'a str, String> {
   s = s["graph".len()..].trim_start();
   let (attrs, rest) = parse_attr_block(s)?;
@@ -145,6 +157,7 @@ fn parse_graph_attrs<'a>(mut s: &'a str, graph: &mut AttractorGraph) -> Result<&
 type AttrList = Vec<(String, String)>;
 
 /// Extracts label, condition, and weight from edge attribute list.
+#[instrument(level = "trace", skip(attrs))]
 pub(crate) fn extract_edge_attrs(
   attrs: &[(String, String)],
 ) -> (Option<String>, Option<String>, i32) {
@@ -165,6 +178,7 @@ pub(crate) fn extract_edge_attrs(
 }
 
 /// Parses `[key=value,...]` and returns the attributes plus the remainder.
+#[instrument(level = "trace")]
 fn parse_attr_block(s: &str) -> Result<(AttrList, &str), String> {
   let s = s.trim_start().strip_prefix('[').ok_or("Expected '['")?;
   let mut attrs = Vec::new();
@@ -181,6 +195,7 @@ fn parse_attr_block(s: &str) -> Result<(AttrList, &str), String> {
 }
 
 /// Unescapes DOT quoted string escape sequences (\\n, \\t, \\\", \\\\).
+#[instrument(level = "trace", skip(s))]
 pub(crate) fn unescape_quoted_string(s: &str) -> String {
   s.replace("\\n", "\n")
     .replace("\\t", "\t")
@@ -189,6 +204,7 @@ pub(crate) fn unescape_quoted_string(s: &str) -> String {
 }
 
 /// Parses a quoted string, number, or identifier value and returns it plus the remainder.
+#[instrument(level = "trace", skip(s))]
 pub(crate) fn parse_value(s: &str) -> Result<(String, &str), String> {
   let s = s.trim_start();
   if s.starts_with('"') {
@@ -215,6 +231,7 @@ pub(crate) fn parse_value(s: &str) -> Result<(String, &str), String> {
 }
 
 /// Parses an optional decimal number and returns it plus the remainder.
+#[instrument(level = "trace", skip(s))]
 pub(crate) fn parse_number(s: &str) -> Option<(String, &str)> {
   let s = s.trim_start();
   let mut end = 0;
@@ -232,6 +249,7 @@ pub(crate) fn parse_number(s: &str) -> Option<(String, &str)> {
 }
 
 /// Builds an `AttractorNode` from a node id and its attribute list.
+#[instrument(level = "trace", skip(attrs))]
 pub(crate) fn parse_node_attrs(
   id: &str,
   attrs: &[(String, String)],
@@ -272,6 +290,7 @@ pub(crate) fn parse_node_attrs(
 }
 
 /// Maps DOT shape names to Attractor handler type strings.
+#[instrument(level = "trace")]
 pub(crate) fn resolve_handler_from_shape(shape: &str) -> Option<String> {
   Some(
     match shape {
@@ -291,6 +310,7 @@ pub(crate) fn resolve_handler_from_shape(shape: &str) -> Option<String> {
 }
 
 /// Parses an edge statement `id -> target [attrs]` and adds edges to `graph`.
+#[instrument(level = "trace", skip(graph))]
 fn parse_edge_stmt<'a>(
   from: &str,
   mut s: &'a str,
@@ -337,6 +357,7 @@ fn parse_edge_stmt<'a>(
 }
 
 /// Skips a balanced `[...]` attribute block and returns the remainder.
+#[instrument(level = "trace")]
 fn skip_attr_block(s: &str) -> Result<&str, String> {
   let s = s.trim_start();
   let idx = s.find('[').ok_or("Expected '['")?;
@@ -359,6 +380,7 @@ fn skip_attr_block(s: &str) -> Result<&str, String> {
 
 /// Skips an assignment `key=value` and returns the remainder.
 /// Parses the value correctly so we don't consume the rest of the file when there's no semicolon.
+#[instrument(level = "trace")]
 fn skip_assign(s: &str) -> Result<&str, String> {
   let eq = s.find('=').ok_or("Expected '='")?;
   let rest = s[eq + 1..].trim_start();
@@ -367,6 +389,7 @@ fn skip_assign(s: &str) -> Result<&str, String> {
 }
 
 /// Skips a balanced `{...}` subgraph and returns the remainder.
+#[instrument(level = "trace")]
 fn skip_subgraph(s: &str) -> Result<&str, String> {
   let start = s.find('{').ok_or("Expected '{'")?;
   let mut depth = 0;

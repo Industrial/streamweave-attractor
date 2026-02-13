@@ -2,11 +2,14 @@
 
 use crate::nodes::{AttractorExecutionLoopNode, InitContextNode, ParseDotNode, ValidateGraphNode};
 use streamweave::graph;
+use tracing::{info, instrument};
 
 /// Build the full Attractor pipeline graph.
 ///
 /// Pipeline: ParseDot → Validate → Init → ExecutionLoop
+#[instrument(level = "trace")]
 pub fn attractor_graph() -> Result<streamweave::graph::Graph, String> {
+  info!("building attractor pipeline graph");
   Ok(graph! {
     parse: ParseDotNode::new("parse"),
     validate: ValidateGraphNode::new("validate"),

@@ -59,8 +59,10 @@ impl Node for ExecNode {
   ) -> Pin<
     Box<dyn std::future::Future<Output = Result<OutputStreams, NodeExecutionError>> + Send + '_>,
   > {
+    let name = self.name.clone();
     let cmd = self.command.clone();
     Box::pin(async move {
+      tracing::trace!(node = %name, command = %cmd, "ExecNode executing");
       let in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
       let (out_tx, out_rx) = mpsc::channel(16);
       let (_err_tx, err_rx) = mpsc::channel(16);

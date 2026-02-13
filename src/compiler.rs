@@ -8,8 +8,10 @@ use crate::nodes::{ExecNode, FixNode, IdentityNode, OutcomeRouterNode, validate_
 use crate::types::AttractorGraph;
 use streamweave::graph_builder::GraphBuilder;
 use streamweave::node::Node;
+use tracing::{info, instrument};
 
 /// Returns true if the condition string matches `outcome=success`.
+#[instrument(level = "trace")]
 fn condition_is_outcome_success(cond: Option<&str>) -> bool {
   cond
     .map(|c| {
@@ -20,6 +22,7 @@ fn condition_is_outcome_success(cond: Option<&str>) -> bool {
 }
 
 /// Returns true if the condition string matches `outcome=fail`.
+#[instrument(level = "trace")]
 fn condition_is_outcome_fail(cond: Option<&str>) -> bool {
   cond
     .map(|c| {
@@ -34,7 +37,9 @@ fn condition_is_outcome_fail(cond: Option<&str>) -> bool {
 /// - Start/exit: IdentityNode (pass-through)
 /// - Exec nodes: ExecNode with command (rejects exec without command per design §2.2)
 /// - Codergen/other: IdentityNode stub
+#[instrument(level = "trace", skip(ast))]
 pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::graph::Graph, String> {
+  info!("compiling AttractorGraph to StreamWeave graph");
   validate_graph::validate(ast)?;
 
   // DSL rule §2.2: reject exec nodes without command
@@ -116,5 +121,10 @@ pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::grap
     .build()
     .map_err(|e| e.to_string())?;
 
+  info!(
+    node_count = ast.nodes.len(),
+    edge_count = ast.edges.len(),
+    "compilation complete"
+  );
   Ok(graph)
 }

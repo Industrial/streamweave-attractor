@@ -8,6 +8,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::instrument;
 
 /// Input: (context, outcome).
 #[derive(Clone)]
@@ -19,6 +20,7 @@ pub struct ApplyContextUpdatesInput {
 }
 
 /// Processes one input item; returns RunContext if item is ApplyContextUpdatesInput.
+#[instrument(level = "trace", skip(item))]
 pub(crate) fn process_apply_context_updates_item(
   item: Arc<dyn Any + Send + Sync>,
 ) -> Option<RunContext> {
@@ -27,6 +29,7 @@ pub(crate) fn process_apply_context_updates_item(
 }
 
 /// Applies outcome context_updates and status/preferred_label to context, returning the updated RunContext.
+#[instrument(level = "trace", skip(input))]
 pub(crate) fn apply_updates(input: &ApplyContextUpdatesInput) -> RunContext {
   let mut ctx = input.context.clone();
   for (k, v) in &input.outcome.context_updates {

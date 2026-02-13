@@ -1,17 +1,27 @@
 //! CLI: Run an Attractor pipeline from a .dot file.
 //!
+//! Uses the compiled pipeline: parse DOT → validate → run (real exec + agent when ATTRACTOR_AGENT_CMD set).
+//! Supports fix-and-retry cycles via the runner loop.
+//!
 //! Usage: `run_dot PATH`
 //! Example: run_dot examples/workflows/pre-push.dot
+//!
+//! Set RUST_LOG=trace to see trace-level logs, e.g. `RUST_LOG=trace run_dot path.dot`
 
 use std::env;
 use std::fs;
 use std::process;
-use std::sync::Arc;
-use streamweave_attractor::attractor_graph;
-use tokio::sync::mpsc;
+use streamweave_attractor::{dot_parser, run_compiled_workflow};
+use tracing::info;
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() {
+  tracing_subscriber::fmt()
+    .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+    .init();
+
+  info!("run_dot starting");
   let args: Vec<String> = env::args().collect();
   if args.len() != 2 {
     eprintln!("Usage: run_dot <path-to-dot-file>");
@@ -28,56 +38,28 @@ async fn main() {
     }
   };
 
-  let mut graph = match attractor_graph() {
-    Ok(g) => g,
+  let ast = match dot_parser::parse_dot(&dot) {
+    Ok(a) => a,
     Err(e) => {
-      eprintln!("Error building pipeline: {}", e);
+      eprintln!("Error parsing DOT: {}", e);
       process::exit(1);
     }
   };
 
-  let (input_tx, input_rx) = mpsc::channel(1);
-  let (output_tx, mut output_rx) = mpsc::channel::<Arc<dyn std::any::Any + Send + Sync>>(10);
-  let (_error_tx, _error_rx) = mpsc::channel::<Arc<dyn std::any::Any + Send + Sync>>(10);
-
-  if let Err(e) = graph.connect_input_channel("input", input_rx) {
-    eprintln!("Error connecting input: {}", e);
-    process::exit(1);
-  }
-  if let Err(e) = graph.connect_output_channel("output", output_tx) {
-    eprintln!("Error connecting output: {}", e);
-    process::exit(1);
-  }
-  if let Err(e) = graph.connect_output_channel("error", _error_tx) {
-    eprintln!("Error connecting error: {}", e);
-    process::exit(1);
-  }
-
-  if input_tx.send(Arc::new(dot)).await.is_err() {
-    eprintln!("Error sending input");
-    process::exit(1);
-  }
-  drop(input_tx);
-
-  if let Err(e) = graph.execute().await {
-    eprintln!("Pipeline execution error: {:?}", e);
-    process::exit(1);
-  }
-
-  if let Some(result) = output_rx.recv().await
-    && let Ok(r) = result.downcast::<streamweave_attractor::AttractorResult>()
-  {
-    println!("Pipeline completed.");
-    println!("  Status: {:?}", r.last_outcome.status);
-    println!("  Notes: {:?}", r.last_outcome.notes);
-    println!("  Completed nodes: {:?}", r.completed_nodes);
-    if format!("{:?}", r.last_outcome.status) != "Success" {
+  let r = match run_compiled_workflow(&ast) {
+    Ok(res) => res,
+    Err(e) => {
+      eprintln!("Pipeline error: {}", e);
       process::exit(1);
     }
-  }
+  };
 
-  if let Err(e) = graph.wait_for_completion().await {
-    eprintln!("Pipeline wait error: {:?}", e);
+  info!(status = ?r.last_outcome.status, nodes = ?r.completed_nodes, "pipeline completed");
+  println!("Pipeline completed.");
+  println!("  Status: {:?}", r.last_outcome.status);
+  println!("  Notes: {:?}", r.last_outcome.notes);
+  println!("  Completed nodes: {:?}", r.completed_nodes);
+  if format!("{:?}", r.last_outcome.status) != "Success" {
     process::exit(1);
   }
 }

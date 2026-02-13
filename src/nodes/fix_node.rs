@@ -9,6 +9,7 @@ use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
+use tracing;
 
 /// Stub fix node: forwards one trigger per input (for retry loop).
 pub struct FixNode {
@@ -51,7 +52,9 @@ impl Node for FixNode {
   ) -> Pin<
     Box<dyn std::future::Future<Output = Result<OutputStreams, NodeExecutionError>> + Send + '_>,
   > {
+    let name = self.name.clone();
     Box::pin(async move {
+      tracing::trace!(node = %name, "FixNode executing");
       let in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
       let (tx, rx) = mpsc::channel(16);
       tokio::spawn(async move {

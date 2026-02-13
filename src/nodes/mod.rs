@@ -10,10 +10,10 @@ mod create_checkpoint;
 #[cfg(test)]
 mod create_checkpoint_test;
 mod exec_node;
-mod execute_handler;
+pub(crate) mod execute_handler;
 #[cfg(test)]
 mod execute_handler_test;
-mod execution_loop;
+pub(crate) mod execution_loop;
 #[cfg(test)]
 mod execution_loop_test;
 mod find_start;
@@ -21,14 +21,14 @@ mod find_start;
 mod find_start_test;
 mod fix_node;
 mod identity_node;
-mod init_context;
+pub(crate) mod init_context;
 #[cfg(test)]
 mod init_context_test;
 mod outcome_router_node;
 mod parse_dot;
 #[cfg(test)]
 mod parse_dot_test;
-mod select_edge;
+pub(crate) mod select_edge;
 #[cfg(test)]
 mod select_edge_test;
 pub(crate) mod validate_graph;

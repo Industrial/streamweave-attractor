@@ -8,6 +8,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::instrument;
 
 /// Input for CheckGoalGatesNode.
 #[derive(Clone)]
@@ -31,11 +32,13 @@ pub struct CheckGoalGatesOutput {
 }
 
 /// Returns true if the outcome satisfies a goal gate (Success or PartialSuccess).
+#[instrument(level = "trace")]
 pub(crate) fn goal_gate_passed(outcome: &NodeOutcome) -> bool {
   outcome.status == OutcomeStatus::Success || outcome.status == OutcomeStatus::PartialSuccess
 }
 
 /// Checks goal gates per attractor-spec §3.4; returns gate_ok and optional retry_target.
+#[instrument(level = "trace", skip(input))]
 pub(crate) fn check_goal_gates(input: &CheckGoalGatesInput) -> CheckGoalGatesOutput {
   if !input.at_exit {
     return CheckGoalGatesOutput {

@@ -8,6 +8,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::instrument;
 
 /// StreamWeave node that emits the start node ID from an AttractorGraph.
 pub struct FindStartNode {
@@ -20,11 +21,13 @@ pub struct FindStartNode {
 }
 
 /// Returns the start node id if the graph has one.
+#[instrument(level = "trace")]
 pub(crate) fn find_start_id(graph: &AttractorGraph) -> Option<String> {
   graph.find_start().map(|n| n.id.clone())
 }
 
 /// Processes one input item; returns start id if item is a graph with a start node.
+#[instrument(level = "trace", skip(item))]
 pub(crate) fn process_find_start_item(item: Arc<dyn Any + Send + Sync>) -> Option<String> {
   let graph = item.downcast::<AttractorGraph>().ok()?;
   find_start_id(&graph)

@@ -6,6 +6,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing;
 
 /// Pass-through node that forwards each input item to output unchanged.
 /// Used as placeholder for start and exit nodes in Phase 1 compiled graph.
@@ -60,7 +61,9 @@ impl Node for IdentityNode {
   ) -> Pin<
     Box<dyn std::future::Future<Output = Result<OutputStreams, NodeExecutionError>> + Send + '_>,
   > {
+    let name = self.name.clone();
     Box::pin(async move {
+      tracing::trace!(node = %name, "IdentityNode executing");
       let mut in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
       let (out_tx, out_rx) = tokio::sync::mpsc::channel(16);
 

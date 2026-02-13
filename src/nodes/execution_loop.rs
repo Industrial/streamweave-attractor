@@ -10,6 +10,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::{info, instrument};
 
 /// Final result of running an Attractor pipeline.
 #[derive(Clone)]
@@ -23,6 +24,7 @@ pub struct AttractorResult {
 }
 
 /// Merges outcome context_updates and status/preferred_label into the given context.
+#[instrument(level = "trace", skip(context, outcome))]
 pub(crate) fn apply_context_updates(context: &mut HashMap<String, String>, outcome: &NodeOutcome) {
   for (k, v) in &outcome.context_updates {
     context.insert(k.clone(), v.clone());
@@ -42,6 +44,7 @@ pub(crate) enum RunLoopResult {
 }
 
 /// Runs the execution loop on one ExecutionState; returns result or error.
+#[instrument(level = "trace", skip(state))]
 pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResult {
   let max_iter = 1000;
   let mut iter = 0;
@@ -53,6 +56,7 @@ pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResu
     }
     iter += 1;
 
+    info!(node_id = %state.current_node_id, iter = iter, "executing node");
     let node = match state.graph.nodes.get(&state.current_node_id) {
       Some(n) => n.clone(),
       None => {
@@ -85,6 +89,10 @@ pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResu
         state.current_node_id = next_id;
       }
       None => {
+        info!(
+          completed_nodes = ?state.completed_nodes,
+          "execution loop complete"
+        );
         return RunLoopResult::Ok(AttractorResult {
           last_outcome: last_outcome.clone(),
           completed_nodes: state.completed_nodes.clone(),

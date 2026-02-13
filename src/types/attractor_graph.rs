@@ -1,6 +1,7 @@
 //! Parsed Attractor pipeline graph (DOT).
 
 use std::collections::HashMap;
+use tracing::instrument;
 
 use super::{AttractorEdge, AttractorNode};
 
@@ -14,14 +15,17 @@ pub struct AttractorGraph {
 }
 
 impl AttractorGraph {
+  #[instrument(level = "trace")]
   pub fn find_start(&self) -> Option<&AttractorNode> {
     self.nodes.values().find(|n| n.is_start())
   }
 
+  #[instrument(level = "trace")]
   pub fn find_exit(&self) -> Option<&AttractorNode> {
     self.nodes.values().find(|n| n.is_exit())
   }
 
+  #[instrument(level = "trace")]
   pub fn outgoing_edges(&self, node_id: &str) -> Vec<&AttractorEdge> {
     self
       .edges

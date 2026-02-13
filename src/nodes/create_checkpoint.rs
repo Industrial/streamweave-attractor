@@ -8,6 +8,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::instrument;
 
 /// Input for CreateCheckpointNode.
 #[derive(Clone)]
@@ -21,6 +22,7 @@ pub struct CreateCheckpointInput {
 }
 
 /// Processes one input item; returns Checkpoint if item is CreateCheckpointInput.
+#[instrument(level = "trace", skip(item))]
 pub(crate) fn process_create_checkpoint_item(
   item: Arc<dyn Any + Send + Sync>,
 ) -> Option<Checkpoint> {
@@ -29,6 +31,7 @@ pub(crate) fn process_create_checkpoint_item(
 }
 
 /// Builds a Checkpoint from CreateCheckpointInput.
+#[instrument(level = "trace", skip(input))]
 pub(crate) fn create_checkpoint_from_input(input: &CreateCheckpointInput) -> Checkpoint {
   Checkpoint {
     context: input.context.clone(),

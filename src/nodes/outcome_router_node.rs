@@ -7,6 +7,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing;
 
 /// Routes NodeOutcome items: Success/PartialSuccess -> "success" port, Fail/Retry -> "fail" port.
 pub struct OutcomeRouterNode {
@@ -60,7 +61,9 @@ impl Node for OutcomeRouterNode {
   ) -> Pin<
     Box<dyn std::future::Future<Output = Result<OutputStreams, NodeExecutionError>> + Send + '_>,
   > {
+    let name = self.name.clone();
     Box::pin(async move {
+      tracing::trace!(node = %name, "OutcomeRouterNode executing");
       let mut in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
       let (success_tx, success_rx) = tokio::sync::mpsc::channel(16);
       let (fail_tx, fail_rx) = tokio::sync::mpsc::channel(16);

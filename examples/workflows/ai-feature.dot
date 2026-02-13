@@ -1,0 +1,68 @@
+digraph AIFeature {
+  graph [
+    goal="AI-driven feature workflow: explore ideas, create branch, commit, pre-commit, test coverage; fix-and-retry until complete",
+    label="AI Feature: explore → branch → commit → pre-commit ⟲ fix → test-coverage ⟲ fix → exit"
+  ]
+  rankdir=LR
+
+  start [shape=Mdiamond, label="Start"]
+  exit [shape=Msquare, label="Exit"]
+
+  explore_ideas [
+    shape=box,
+    type=codergen,
+    label="Explore ideas (AI)",
+    prompt="Explore new ideas for the project. Suggest a concrete feature to implement, outline implementation steps, and propose a feature branch name (e.g. feature/add-X). Output your plan. The pipeline will create the branch and proceed with commits."
+  ]
+
+  create_branch [
+    shape=box,
+    type=exec,
+    label="Create feature branch",
+    command="git rev-parse --git-dir >/dev/null 2>&1 && git checkout -b \"feature/ai-explore-$(date +%s)\" 2>/dev/null || git checkout -b feature/ai-explore"
+  ]
+
+  commit [
+    shape=box,
+    type=exec,
+    label="Stage and commit",
+    command="git add -A && (git diff --cached --quiet && true || git commit -m \"WIP: AI feature exploration\")"
+  ]
+
+  pre_commit [
+    shape=box,
+    type=exec,
+    label="Pre-commit checks",
+    command="devenv shell -- sh -c 'bin/format && bin/lint && bin/check'"
+  ]
+
+  fix_pre_commit [
+    shape=box,
+    label="Fix (pre-commit)",
+    prompt="Pre-commit failed (format, lint, or check). From the output, identify failures. Create small bd tasks: devenv shell -- bd create \"...\" -t task -p 1 --json. Act as beads-worker: bd ready, claim one task, fix it, bd close, commit. Exit 0; pipeline returns to pre-commit."
+  ]
+
+  test_coverage [
+    shape=box,
+    type=exec,
+    label="bin/test-coverage",
+    command="devenv shell -- bin/test-coverage"
+  ]
+
+  fix_test_coverage [
+    shape=box,
+    label="Fix (test-coverage)",
+    prompt="bin/test-coverage failed. From the output, identify coverage or test failures. Create small bd tasks: devenv shell -- bd create \"...\" -t task -p 1 --json. Act as beads-worker: bd ready, claim one task, fix it, bd close, commit. Exit 0; pipeline returns to bin/test-coverage."
+  ]
+
+  start -> explore_ideas
+  explore_ideas -> create_branch
+  create_branch -> commit
+  commit -> pre_commit
+  pre_commit -> test_coverage [label="success", condition="outcome=success"]
+  pre_commit -> fix_pre_commit [label="failure", condition="outcome=fail"]
+  fix_pre_commit -> pre_commit
+  test_coverage -> exit [label="success", condition="outcome=success"]
+  test_coverage -> fix_test_coverage [label="failure", condition="outcome=fail"]
+  fix_test_coverage -> test_coverage
+}

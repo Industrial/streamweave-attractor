@@ -8,6 +8,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::instrument;
 
 /// StreamWeave node that validates an AttractorGraph.
 pub struct ValidateGraphNode {
@@ -30,6 +31,7 @@ impl ValidateGraphNode {
 }
 
 /// Validates the graph (exactly one start, one exit) per attractor-spec §7.
+#[instrument(level = "trace")]
 pub(crate) fn validate(graph: &AttractorGraph) -> Result<(), String> {
   if graph.find_start().is_none() {
     return Err("Graph must have exactly one start node (shape=Mdiamond)".to_string());

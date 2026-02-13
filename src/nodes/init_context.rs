@@ -8,6 +8,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::instrument;
 
 /// StreamWeave node that initializes ExecutionState from a validated graph.
 pub struct InitContextNode {
@@ -20,6 +21,7 @@ pub struct InitContextNode {
 }
 
 /// Processes one input item; returns ExecutionState if item is an AttractorGraph.
+#[instrument(level = "trace", skip(item))]
 pub(crate) fn process_init_context_item(
   item: Arc<dyn Any + Send + Sync>,
 ) -> Option<ExecutionState> {
@@ -28,6 +30,7 @@ pub(crate) fn process_init_context_item(
 }
 
 /// Builds ExecutionState from a validated graph.
+#[instrument(level = "trace")]
 pub(crate) fn create_initial_state(graph: AttractorGraph) -> ExecutionState {
   let start_id = graph
     .find_start()

@@ -8,8 +8,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::instrument;
 
 /// Parses DOT source into AttractorGraph.
+#[instrument(level = "trace", skip(s))]
 pub(crate) fn process_dot(s: &str) -> Result<crate::types::AttractorGraph, String> {
   dot_parser::parse_dot(s)
 }
@@ -25,6 +27,7 @@ pub(crate) enum ParseDotItemResult {
 }
 
 /// Processes one input item for ParseDotNode.
+#[instrument(level = "trace", skip(item))]
 pub(crate) fn process_parse_dot_item(item: Arc<dyn Any + Send + Sync>) -> ParseDotItemResult {
   let s = match item.downcast::<String>() {
     Ok(arc) => (*arc).clone(),
