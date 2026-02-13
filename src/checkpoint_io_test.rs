@@ -1,6 +1,6 @@
 //! Tests for checkpoint save/load.
 
-use crate::checkpoint_io::{load_checkpoint, save_checkpoint, CHECKPOINT_FILENAME};
+use crate::checkpoint_io::{CHECKPOINT_FILENAME, load_checkpoint, save_checkpoint};
 use crate::types::Checkpoint;
 use std::collections::HashMap;
 

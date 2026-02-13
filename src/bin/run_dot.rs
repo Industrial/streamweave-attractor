@@ -21,7 +21,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process;
 use streamweave_attractor::checkpoint_io::{self, CHECKPOINT_FILENAME};
-use streamweave_attractor::{dot_parser, run_compiled_graph, RunOptions};
+use streamweave_attractor::{RunOptions, dot_parser, run_compiled_graph};
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 

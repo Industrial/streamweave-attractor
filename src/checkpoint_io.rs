@@ -8,9 +8,8 @@ pub const CHECKPOINT_FILENAME: &str = "checkpoint.json";
 
 /// Saves a checkpoint to `path` as JSON.
 pub fn save_checkpoint(path: &Path, cp: &Checkpoint) -> Result<(), std::io::Error> {
-  let json = serde_json::to_string_pretty(cp).map_err(|e| {
-    std::io::Error::new(std::io::ErrorKind::InvalidData, e)
-  })?;
+  let json = serde_json::to_string_pretty(cp)
+    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
   if let Some(parent) = path.parent() {
     std::fs::create_dir_all(parent)?;
   }
@@ -20,7 +19,6 @@ pub fn save_checkpoint(path: &Path, cp: &Checkpoint) -> Result<(), std::io::Erro
 /// Loads a checkpoint from `path`. Returns error if file is missing or invalid JSON.
 pub fn load_checkpoint(path: &Path) -> Result<Checkpoint, std::io::Error> {
   let bytes = std::fs::read(path)?;
-  serde_json::from_slice(&bytes).map_err(|e| {
-    std::io::Error::new(std::io::ErrorKind::InvalidData, e)
-  })
+  serde_json::from_slice(&bytes)
+    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
 }

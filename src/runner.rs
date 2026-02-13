@@ -57,7 +57,9 @@ pub async fn run_compiled_graph(
   ast: &AttractorGraph,
   options: RunOptions<'_>,
 ) -> Result<AttractorResult, String> {
-  let entry_node_id = options.resume_checkpoint.map(|cp| cp.current_node_id.as_str());
+  let entry_node_id = options
+    .resume_checkpoint
+    .map(|cp| cp.current_node_id.as_str());
   let mut graph = crate::compiler::compile_attractor_graph(ast, entry_node_id)?;
 
   let initial = match options.resume_checkpoint {
@@ -105,7 +107,9 @@ pub async fn run_compiled_graph(
     .map(|p| {
       (
         p.context.clone(),
-        p.outcome.clone().unwrap_or_else(|| NodeOutcome::success("Exit")),
+        p.outcome
+          .clone()
+          .unwrap_or_else(|| NodeOutcome::success("Exit")),
         p.completed_nodes.clone(),
         p.current_node_id.clone(),
       )

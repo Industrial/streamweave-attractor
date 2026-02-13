@@ -124,9 +124,16 @@ async fn run_dir_writes_checkpoint_resume_completes() {
   .expect("run_compiled_graph");
 
   let cp_path = run_dir.path().join("checkpoint.json");
-  assert!(cp_path.exists(), "checkpoint.json should exist after run with run_dir");
-  let cp = streamweave_attractor::checkpoint_io::load_checkpoint(&cp_path).expect("load checkpoint");
-  assert_eq!(cp.context.get("goal").map(String::as_str), Some("resume-test"));
+  assert!(
+    cp_path.exists(),
+    "checkpoint.json should exist after run with run_dir"
+  );
+  let cp =
+    streamweave_attractor::checkpoint_io::load_checkpoint(&cp_path).expect("load checkpoint");
+  assert_eq!(
+    cp.context.get("goal").map(String::as_str),
+    Some("resume-test")
+  );
   assert!(!cp.completed_nodes.is_empty() || !cp.current_node_id.is_empty());
 
   let resumed = streamweave_attractor::run_compiled_graph(
