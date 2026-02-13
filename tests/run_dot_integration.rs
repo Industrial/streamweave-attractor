@@ -1,6 +1,7 @@
-//! Integration tests for the run_dot CLI.
+//! Integration tests for the run_dot CLI and compiled graph path.
 //!
-//! Runs the binary via `cargo run --bin run_dot` with temp .dot files.
+//! - CLI: runs the binary via `cargo run --bin run_dot` with temp .dot files.
+//! - Compiled path: pre-push.dot via run_compiled_graph (library).
 
 use std::process::Command;
 
@@ -59,4 +60,35 @@ fn run_dot_succeeds_with_minimal_start_exit_dot() {
   let stdout = String::from_utf8_lossy(&out.stdout);
   assert!(stdout.contains("Pipeline completed"));
   assert!(stdout.contains("Success") || stdout.contains("completed"));
+}
+
+/// Runs a pre-push-shaped workflow (same topology as pre-push.dot) with quick exec commands
+/// so the test finishes in reasonable time. Verifies run_compiled_graph end-to-end.
+#[tokio::test]
+async fn pre_push_dot_via_run_compiled_graph() {
+  let dot = r#"
+    digraph PrePush {
+      graph [goal="test"]
+      rankdir=LR
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      pre_push [type=exec, command="true"]
+      test_coverage [type=exec, command="true"]
+      fix_pre_push [label="Fix"]
+      fix_test_coverage [label="Fix"]
+      start -> pre_push
+      pre_push -> test_coverage [condition="outcome=success"]
+      pre_push -> fix_pre_push [condition="outcome=fail"]
+      test_coverage -> exit [condition="outcome=success"]
+      test_coverage -> fix_test_coverage [condition="outcome=fail"]
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let result = streamweave_attractor::run_compiled_graph(&ast)
+    .await
+    .expect("run_compiled_graph");
+  assert!(
+    !result.context.is_empty() || result.last_outcome.notes.is_some(),
+    "expected context or outcome notes"
+  );
 }
