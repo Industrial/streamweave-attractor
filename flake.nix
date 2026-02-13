@@ -28,6 +28,8 @@
         version = "0.1.0";
         src = self;
         cargoLock.lockFile = self + "/Cargo.lock";
+        nativeBuildInputs = [pkgs.pkg-config];
+        buildInputs = [pkgs.openssl];
         cargoBuildFlags = ["--example" "simple_pipeline"];
         installPhase = ''
           runHook preInstall
