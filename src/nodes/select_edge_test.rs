@@ -68,7 +68,11 @@ fn select_by_condition_has_tasks() {
   ctx.insert("has_tasks".to_string(), "true".to_string());
   ctx.insert("ready_task_id".to_string(), "bd-42".to_string());
   let g = graph(
-    vec![node("check", "box"), node("claim", "box"), node("exit", "Msquare")],
+    vec![
+      node("check", "box"),
+      node("claim", "box"),
+      node("exit", "Msquare"),
+    ],
     vec![
       AttractorEdge {
         from_node: "check".to_string(),
