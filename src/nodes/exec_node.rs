@@ -70,6 +70,7 @@ impl Node for ExecNode {
       tokio::spawn(async move {
         let mut s = in_stream;
         while let Some(item) = s.next().await {
+          tracing::info!(node = %name, command = %cmd, "running");
           let incoming = item.downcast::<GraphPayload>().ok();
           let context: RunContext = incoming
             .as_ref()
@@ -105,8 +106,10 @@ impl Node for ExecNode {
           let payload = GraphPayload::new(updated, Some(outcome), name.clone(), completed);
           let arc = Arc::new(payload) as Arc<dyn Any + Send + Sync>;
           let _ = if is_success {
+            tracing::info!(node = %name, "finished: success");
             out_tx.send(arc).await
           } else {
+            tracing::info!(node = %name, "finished: error");
             err_tx.send(arc).await
           };
         }

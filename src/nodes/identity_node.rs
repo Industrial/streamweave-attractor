@@ -83,6 +83,7 @@ impl Node for IdentityNode {
       tokio::spawn(async move {
         use futures::StreamExt;
         while let Some(item) = in_stream.next().await {
+          tracing::info!(node = %name, "forwarding payload");
           let out_item: Arc<dyn std::any::Any + Send + Sync> =
             if let Ok(payload) = item.clone().downcast::<GraphPayload>() {
               Arc::new(payload.with_node_completed(&name))
