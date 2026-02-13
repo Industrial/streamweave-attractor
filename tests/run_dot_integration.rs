@@ -99,6 +99,46 @@ async fn pre_push_dot_via_run_compiled_graph() {
   );
 }
 
+/// Test out/error port wiring: exec that fails sends to error port → fix node → exit.
+#[tokio::test]
+async fn test_out_error_dot_error_path_then_fix_to_exit() {
+  let dot = r#"
+    digraph TestOutError {
+      graph [goal="test out/error ports"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      ok [type=exec, command="true"]
+      fail_step [type=exec, command="false"]
+      fix [type=exec, command="true"]
+      start -> ok
+      ok -> fail_step
+      fail_step -> exit [condition="outcome=success"]
+      fail_step -> fix [condition="outcome=fail"]
+      fix -> exit
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let result = streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: None,
+      resume_checkpoint: None,
+    },
+  )
+  .await
+  .expect("run_compiled_graph");
+  assert!(
+    result.completed_nodes.contains(&"fix".to_string()),
+    "fix node should run (error port from fail_step → fix → exit); completed: {:?}",
+    result.completed_nodes
+  );
+  assert!(
+    result.completed_nodes.contains(&"fail_step".to_string()),
+    "fail_step should complete (then error path to fix); completed: {:?}",
+    result.completed_nodes
+  );
+}
+
 /// Run pipeline with --run-dir, then resume from that checkpoint via library.
 #[tokio::test]
 async fn run_dir_writes_checkpoint_resume_completes() {
