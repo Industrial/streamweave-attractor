@@ -69,7 +69,7 @@ impl Node for ExecNode {
       let (err_tx, err_rx) = mpsc::channel(16);
       tokio::spawn(async move {
         let mut s = in_stream;
-        while let Some(item) = s.next().await {
+        if let Some(item) = s.next().await {
           tracing::info!(node = %name, command = %cmd, "running");
           let incoming = item.downcast::<GraphPayload>().ok();
           let context: RunContext = incoming
@@ -117,7 +117,6 @@ impl Node for ExecNode {
             let _ = err_tx.send(arc).await;
             drop(out_tx);
           }
-          break; // One item per run; drop unused so merge nodes don't deadlock
         }
       });
       let mut outputs = HashMap::new();
