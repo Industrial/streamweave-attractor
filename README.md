@@ -83,6 +83,53 @@ This runs: format, fix, check, lint, build, test, audit, check-docs. (Examples l
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) for development workflow and agent instructions.
 
+## Installing as a CLI in another project (devenv)
+
+You can install `streamweave-attractor` as a CLI in another project’s devenv environment so the `streamweave-attractor` binary is available in the shell.
+
+### 1. Add the flake input
+
+In the **other** project, add `streamweave-attractor` as an input.
+
+**If that project uses a `devenv.yaml`** (standalone devenv), add:
+
+```yaml
+# devenv.yaml
+inputs:
+  streamweave-attractor:
+    url: github:Industrial/streamweave-attractor
+  # Optional: use a local checkout instead of GitHub
+  # streamweave-attractor:
+  #   path: ../streamweave-attractor
+```
+
+**If that project uses a Nix flake** (e.g. `flake.nix` with devenv), add the same input to the flake’s `inputs` and ensure it is passed through to the devenv module (e.g. via `inputs` in `perSystem` or your devenv integration).
+
+### 2. Add the package in `devenv.nix`
+
+In the other project’s `devenv.nix`, add the package so it is on `PATH`:
+
+```nix
+{ inputs, pkgs, ... }: {
+  packages = with pkgs; [
+    # your other packages ...
+    inputs.streamweave-attractor.packages.${pkgs.system}.default
+  ];
+}
+```
+
+After `devenv shell` (or entering the environment), you can run:
+
+```bash
+streamweave-attractor
+```
+
+The flake’s default package builds the `simple_pipeline` example and installs it as the `streamweave-attractor` binary. For `run_dot` (DOT-based pipelines), use this repo’s devenv and run:
+
+```bash
+cargo run --bin run_dot -- examples/workflows/pre-push.dot
+```
+
 ## License
 
 This project is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/). See [LICENSE](LICENSE) for details.
