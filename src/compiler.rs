@@ -37,8 +37,14 @@ fn condition_is_outcome_fail(cond: Option<&str>) -> bool {
 /// - Start/exit: IdentityNode (pass-through)
 /// - Exec nodes: ExecNode with command (rejects exec without command per design §2.2)
 /// - Codergen/other: CodergenNode (invokes ATTRACTOR_AGENT_CMD with prompt)
+///
+/// When `entry_node_id` is `Some(id)`, the graph input is connected to that node (for resume).
+/// When `None`, the graph input is connected to the start node.
 #[instrument(level = "trace", skip(ast))]
-pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::graph::Graph, String> {
+pub fn compile_attractor_graph(
+  ast: &AttractorGraph,
+  entry_node_id: Option<&str>,
+) -> Result<streamweave::graph::Graph, String> {
   info!("compiling AttractorGraph to StreamWeave graph");
   validate_graph::validate(ast)?;
 
@@ -53,6 +59,15 @@ pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::grap
     .find_start()
     .map(|n| n.id.clone())
     .ok_or("missing start node")?;
+  let entry_id = match entry_node_id {
+    Some(id) => {
+      if !ast.nodes.contains_key(id) {
+        return Err(format!("entry node '{}' is not a node in the graph", id));
+      }
+      id.to_string()
+    }
+    None => start_id.clone(),
+  };
   let exit_id = ast
     .find_exit()
     .map(|n| n.id.clone())
@@ -109,7 +124,7 @@ pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::grap
   }
 
   let graph = builder
-    .input::<std::sync::Arc<dyn std::any::Any + Send + Sync>>("input", &start_id, "in", None)
+    .input::<std::sync::Arc<dyn std::any::Any + Send + Sync>>("input", &entry_id, "in", None)
     .output("output", &exit_id, "out")
     .build()
     .map_err(|e| e.to_string())?;
