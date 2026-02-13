@@ -9,7 +9,7 @@ repos:
     hooks:
       - id: pre-push
         name: pre-push (format + tests)
-        entry: bin/pre-commit
+        entry: bin/pre-push
         language: system
         stages: [pre-push]
         pass_filenames: false
