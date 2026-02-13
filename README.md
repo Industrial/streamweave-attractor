@@ -64,6 +64,23 @@ devenv shell -- cargo run --example simple_pipeline
 devenv shell -- cargo build --examples
 ```
 
+### Nix flake (Cargo.lock and path dependency)
+
+- **Cargo.lock** is committed so that when the repo is used as a flake input (e.g. `github:Industrial/streamweave-attractor`), Nix can use it for reproducible builds. Do not add `Cargo.lock` to `.gitignore`.
+- The flake depends on **streamweave** via input `streamweave` (default: `path:../streamweave`). When the flake is consumed from GitHub (e.g. by another project’s `devenv`), that path does not exist. Override the input in the consuming flake, for example:
+  ```nix
+  streamweave-attractor.url = "github:Industrial/streamweave-attractor";
+  # Override so the build can find streamweave:
+  streamweave-attractor.inputs.streamweave.url = "github:Industrial/streamweave";
+  # or path: ./streamweave if you have it in your tree
+  ```
+- **[cargo2nix](https://github.com/cargo2nix/cargo2nix)** is integrated optionally. The default package uses `buildRustPackage`. To use cargo2nix (granular Rust builds), generate `Cargo.nix` once and commit it:
+  ```bash
+  nix run .#generate
+  git add Cargo.nix
+  ```
+  Then `nix build .#cargo2nix` builds the workspace crate via cargo2nix. The default `nix build` / `nix run` still use `buildRustPackage` and do not require `Cargo.nix`.
+
 ### Development
 
 ```bash

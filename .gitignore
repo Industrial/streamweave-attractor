@@ -29,7 +29,6 @@
 /.serena/
 /.tmp
 /target/
-Cargo.lock
 Thumbs.db
 dev-debug.log
 devenv.local.nix

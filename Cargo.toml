@@ -14,7 +14,7 @@ categories = ["asynchronous", "data-structures"]
 [dependencies]
 # Pin to fixed version for RUSTSEC-2026-0007 (BytesMut::reserve integer overflow)
 bytes = ">=1.11.1"
-streamweave = { path = "../streamweave" }
+streamweave = "0.10.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 async-trait = "0.1"
