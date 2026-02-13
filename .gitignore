@@ -38,5 +38,6 @@ log/*
 logs
 node_modules/
 npm-debug.log*
+outcome.json
 yarn-debug.log*
 yarn-error.log*
