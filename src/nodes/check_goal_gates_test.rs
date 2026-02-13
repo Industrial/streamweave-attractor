@@ -56,14 +56,14 @@ fn goal_gate_passed_for_success_and_partial_success() {
 
 #[test]
 fn goal_gate_passed_false_for_fail() {
-  assert!(!goal_gate_passed(&NodeOutcome::fail("err")));
+  assert!(!goal_gate_passed(&NodeOutcome::error("err")));
 }
 
 #[test]
 fn gate_ok_when_not_at_exit() {
   let g = graph(vec![node("a", true)]);
   let mut outcomes = HashMap::new();
-  outcomes.insert("a".to_string(), NodeOutcome::fail("err"));
+  outcomes.insert("a".to_string(), NodeOutcome::error("err"));
   let input = CheckGoalGatesInput {
     graph: g,
     node_outcomes: outcomes,
@@ -91,7 +91,7 @@ fn gate_ok_when_goal_gate_success() {
 fn gate_not_ok_when_goal_gate_fail() {
   let g = graph(vec![node("gate", true)]);
   let mut outcomes = HashMap::new();
-  outcomes.insert("gate".to_string(), NodeOutcome::fail("err"));
+  outcomes.insert("gate".to_string(), NodeOutcome::error("err"));
   let input = CheckGoalGatesInput {
     graph: g,
     node_outcomes: outcomes,

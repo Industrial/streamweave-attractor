@@ -184,7 +184,7 @@ fn done_false_when_no_edges_and_fail() {
   ctx.insert("outcome".to_string(), "FAIL".to_string());
   let input = SelectEdgeInput {
     node_id: "x".to_string(),
-    outcome: NodeOutcome::fail("err"),
+    outcome: NodeOutcome::error("err"),
     context: ctx,
     graph: g,
   };
@@ -242,7 +242,7 @@ fn select_by_condition_outcome_neq() {
   );
   let input = SelectEdgeInput {
     node_id: "a".to_string(),
-    outcome: NodeOutcome::fail("x"),
+    outcome: NodeOutcome::error("x"),
     context: ctx,
     graph: g,
   };

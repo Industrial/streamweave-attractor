@@ -2,32 +2,22 @@
 //!
 //! Phase 1: Trivial start→exit with identity nodes.
 //! Phase 2: ExecNode for exec, CodergenNode for codergen, identity for start/exit.
-//! Phase 3: Conditional routing (outcome=success / outcome=fail) via OutcomeRouterNode.
+//! Phase 3: Direct port routing: success -> "out", error -> "error" (no router).
 
-use crate::nodes::{CodergenNode, ExecNode, IdentityNode, OutcomeRouterNode, validate_graph};
+use crate::nodes::{CodergenNode, ExecNode, IdentityNode, validate_graph};
 use crate::types::AttractorGraph;
 use streamweave::graph_builder::GraphBuilder;
 use streamweave::node::Node;
 use tracing::{info, instrument};
 
-/// Returns true if the condition string matches `outcome=success`.
+/// Returns true if the condition string matches `outcome=fail` or `outcome=error`.
 #[instrument(level = "trace")]
-fn condition_is_outcome_success(cond: Option<&str>) -> bool {
-  cond
-    .map(|c| {
-      let c = c.trim().to_lowercase();
-      c == "outcome=success" || c.starts_with("outcome=success")
-    })
-    .unwrap_or(false)
-}
-
-/// Returns true if the condition string matches `outcome=fail`.
-#[instrument(level = "trace")]
-fn condition_is_outcome_fail(cond: Option<&str>) -> bool {
+fn condition_is_outcome_error(cond: Option<&str>) -> bool {
   cond
     .map(|c| {
       let c = c.trim().to_lowercase();
       c == "outcome=fail" || c.starts_with("outcome=fail")
+      || c == "outcome=error" || c.starts_with("outcome=error")
     })
     .unwrap_or(false)
 }
@@ -93,34 +83,14 @@ pub fn compile_attractor_graph(
     builder = builder.add_node(node_id, sw_node);
   }
 
-  let mut routed_sources: std::collections::HashSet<String> = std::collections::HashSet::new();
   for e in &ast.edges {
-    let from = &e.from_node;
-    if routed_sources.contains(from) {
-      continue;
-    }
-    let out_edges = ast.outgoing_edges(from);
-    if out_edges.len() == 2 {
-      let success_edge = out_edges
-        .iter()
-        .find(|e| condition_is_outcome_success(e.condition.as_deref()));
-      let fail_edge = out_edges
-        .iter()
-        .find(|e| condition_is_outcome_fail(e.condition.as_deref()));
-      if let (Some(se), Some(fe)) = (success_edge, fail_edge) {
-        let router_id = format!("{}_router", from);
-        builder = builder.add_node(
-          &router_id,
-          Box::new(OutcomeRouterNode::new(&router_id)) as Box<dyn Node>,
-        );
-        builder = builder.connect(from, "out", &router_id, "in");
-        builder = builder.connect(&router_id, "success", &se.to_node, "in");
-        builder = builder.connect(&router_id, "fail", &fe.to_node, "in");
-        routed_sources.insert(from.clone());
-        continue;
-      }
-    }
-    builder = builder.connect(&e.from_node, "out", &e.to_node, "in");
+    let (source_port, target_node, target_port) = if condition_is_outcome_error(e.condition.as_deref()) {
+      ("error", e.to_node.as_str(), "in")
+    } else {
+      // success or unconditional: use "out"
+      ("out", e.to_node.as_str(), "in")
+    };
+    builder = builder.connect(&e.from_node, source_port, target_node, target_port);
   }
 
   let graph = builder

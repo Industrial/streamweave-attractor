@@ -27,9 +27,9 @@ impl NodeOutcome {
     }
   }
 
-  pub fn fail(reason: impl Into<String>) -> Self {
+  pub fn error(reason: impl Into<String>) -> Self {
     Self {
-      status: OutcomeStatus::Fail,
+      status: OutcomeStatus::Error,
       notes: None,
       failure_reason: Some(reason.into()),
       context_updates: HashMap::new(),

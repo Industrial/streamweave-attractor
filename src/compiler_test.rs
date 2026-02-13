@@ -44,7 +44,7 @@ fn compile_with_conditional_routing() {
   "#;
   let ast = parse_dot(dot).unwrap();
   let graph = compile_attractor_graph(&ast, None).unwrap();
-  // Graph built with OutcomeRouterNode for run
+  // Graph built with direct out/error ports for run
   assert!(graph.name().contains("compiled"));
 }
 

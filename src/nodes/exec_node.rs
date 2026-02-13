@@ -2,7 +2,7 @@
 //! Accepts GraphPayload (passes context), applies context_updates from outcome, emits GraphPayload.
 
 use crate::nodes::apply_context_updates::{ApplyContextUpdatesInput, apply_updates};
-use crate::types::{GraphPayload, NodeOutcome, RunContext};
+use crate::types::{GraphPayload, NodeOutcome, OutcomeStatus, RunContext};
 use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
@@ -66,7 +66,7 @@ impl Node for ExecNode {
       tracing::trace!(node = %name, command = %cmd, "ExecNode executing");
       let in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
       let (out_tx, out_rx) = mpsc::channel(16);
-      let (_err_tx, err_rx) = mpsc::channel(16);
+      let (err_tx, err_rx) = mpsc::channel(16);
       tokio::spawn(async move {
         let mut s = in_stream;
         while let Some(item) = s.next().await {
@@ -86,14 +86,16 @@ impl Node for ExecNode {
                 if o.status.success() {
                   NodeOutcome::success("ok")
                 } else {
-                  NodeOutcome::fail(format!("exit {}", o.status.code().unwrap_or(-1)))
+                  NodeOutcome::error(format!("exit {}", o.status.code().unwrap_or(-1)))
                 }
               }
-              Err(e) => NodeOutcome::fail(format!("{}", e)),
+              Err(e) => NodeOutcome::error(format!("{}", e)),
             }
           })
           .await
-          .unwrap_or_else(|e| NodeOutcome::fail(format!("{}", e)));
+          .unwrap_or_else(|e| NodeOutcome::error(format!("{}", e)));
+          let is_success = outcome.status == OutcomeStatus::Success
+            || outcome.status == OutcomeStatus::PartialSuccess;
           let updated = apply_updates(&ApplyContextUpdatesInput {
             context: context.clone(),
             outcome: outcome.clone(),
@@ -101,9 +103,12 @@ impl Node for ExecNode {
           let mut completed = completed_nodes;
           completed.push(name.clone());
           let payload = GraphPayload::new(updated, Some(outcome), name.clone(), completed);
-          let _ = out_tx
-            .send(Arc::new(payload) as Arc<dyn Any + Send + Sync>)
-            .await;
+          let arc = Arc::new(payload) as Arc<dyn Any + Send + Sync>;
+          let _ = if is_success {
+            out_tx.send(arc).await
+          } else {
+            err_tx.send(arc).await
+          };
         }
       });
       let mut outputs = HashMap::new();

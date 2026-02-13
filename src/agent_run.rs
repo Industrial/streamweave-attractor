@@ -40,7 +40,7 @@ pub(crate) fn run_agent(agent_cmd: &str, prompt: &str) -> NodeOutcome {
   let parts: Vec<&str> = agent_cmd.split_whitespace().collect();
   let (bin, args) = match parts.split_first() {
     Some((b, a)) => (b, a),
-    None => return NodeOutcome::fail("ATTRACTOR_AGENT_CMD is empty"),
+    None => return NodeOutcome::error("ATTRACTOR_AGENT_CMD is empty"),
   };
 
   match Command::new(bin)
@@ -68,12 +68,12 @@ pub(crate) fn run_agent(agent_cmd: &str, prompt: &str) -> NodeOutcome {
               .code()
               .map(|c| format!("agent exit {}", c))
               .unwrap_or_else(|| "agent signal".to_string());
-            NodeOutcome::fail(msg)
+            NodeOutcome::error(msg)
           }
         }
-        Err(e) => NodeOutcome::fail(format!("agent wait: {}", e)),
+        Err(e) => NodeOutcome::error(format!("agent wait: {}", e)),
       }
     }
-    Err(e) => NodeOutcome::fail(format!("agent spawn: {}", e)),
+    Err(e) => NodeOutcome::error(format!("agent spawn: {}", e)),
   }
 }

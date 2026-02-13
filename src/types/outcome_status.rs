@@ -7,7 +7,7 @@ use std::fmt;
 pub enum OutcomeStatus {
   Success,
   PartialSuccess,
-  Fail,
+  Error,  // was Fail
   Retry,
 }
 
@@ -16,7 +16,7 @@ impl fmt::Display for OutcomeStatus {
     match self {
       OutcomeStatus::Success => write!(f, "success"),
       OutcomeStatus::PartialSuccess => write!(f, "partial_success"),
-      OutcomeStatus::Fail => write!(f, "fail"),
+      OutcomeStatus::Error => write!(f, "error"),
       OutcomeStatus::Retry => write!(f, "retry"),
     }
   }

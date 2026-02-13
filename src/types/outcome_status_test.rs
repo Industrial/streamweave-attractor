@@ -13,8 +13,8 @@ fn display_partial_success() {
 }
 
 #[test]
-fn display_fail() {
-  assert_eq!(OutcomeStatus::Fail.to_string(), "fail");
+fn display_error() {
+  assert_eq!(OutcomeStatus::Error.to_string(), "error");
 }
 
 #[test]
@@ -25,5 +25,5 @@ fn display_retry() {
 #[test]
 fn eq_variants() {
   assert_eq!(OutcomeStatus::Success, OutcomeStatus::Success);
-  assert_ne!(OutcomeStatus::Success, OutcomeStatus::Fail);
+  assert_ne!(OutcomeStatus::Success, OutcomeStatus::Error);
 }

@@ -20,16 +20,16 @@ fn success_accepts_string() {
 }
 
 #[test]
-fn fail_creates_fail_outcome() {
-  let o = NodeOutcome::fail("error");
-  assert_eq!(o.status, OutcomeStatus::Fail);
+fn error_creates_error_outcome() {
+  let o = NodeOutcome::error("error");
+  assert_eq!(o.status, OutcomeStatus::Error);
   assert!(o.notes.is_none());
   assert_eq!(o.failure_reason.as_deref(), Some("error"));
   assert!(o.context_updates.is_empty());
 }
 
 #[test]
-fn fail_accepts_string() {
-  let o = NodeOutcome::fail(String::from("boom"));
+fn error_accepts_string() {
+  let o = NodeOutcome::error(String::from("boom"));
   assert_eq!(o.failure_reason.as_deref(), Some("boom"));
 }

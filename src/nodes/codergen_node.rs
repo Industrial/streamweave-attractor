@@ -3,7 +3,7 @@
 
 use crate::agent_run;
 use crate::nodes::apply_context_updates::{ApplyContextUpdatesInput, apply_updates};
-use crate::types::{GraphPayload, NodeOutcome, RunContext};
+use crate::types::{GraphPayload, NodeOutcome, OutcomeStatus, RunContext};
 use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
@@ -67,7 +67,7 @@ impl Node for CodergenNode {
       tracing::trace!(node = %name, "CodergenNode executing");
       let in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
       let (out_tx, out_rx) = mpsc::channel(16);
-      let (_err_tx, err_rx) = mpsc::channel(16);
+      let (err_tx, err_rx) = mpsc::channel(16);
       let agent_cmd = env::var("ATTRACTOR_AGENT_CMD").unwrap_or_else(|_| {
         "cursor-agent --print true --output-format stream-json --stream-partial-output --model auto --force --workspace .".to_string()
       });
@@ -87,7 +87,9 @@ impl Node for CodergenNode {
           let p = prompt.clone();
           let outcome = tokio::task::spawn_blocking(move || agent_run::run_agent(&cmd, &p))
             .await
-            .unwrap_or_else(|e| NodeOutcome::fail(format!("{}", e)));
+            .unwrap_or_else(|e| NodeOutcome::error(format!("{}", e)));
+          let is_success = outcome.status == OutcomeStatus::Success
+            || outcome.status == OutcomeStatus::PartialSuccess;
           let updated = apply_updates(&ApplyContextUpdatesInput {
             context: context.clone(),
             outcome: outcome.clone(),
@@ -95,9 +97,12 @@ impl Node for CodergenNode {
           let mut completed = completed_nodes;
           completed.push(name.clone());
           let payload = GraphPayload::new(updated, Some(outcome), name.clone(), completed);
-          let _ = out_tx
-            .send(Arc::new(payload) as Arc<dyn Any + Send + Sync>)
-            .await;
+          let arc = Arc::new(payload) as Arc<dyn Any + Send + Sync>;
+          let _ = if is_success {
+            out_tx.send(arc).await
+          } else {
+            err_tx.send(arc).await
+          };
         }
       });
       let mut outputs = HashMap::new();

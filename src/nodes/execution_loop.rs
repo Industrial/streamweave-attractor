@@ -69,7 +69,7 @@ pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResu
       context: state.context.clone(),
       graph: state.graph.clone(),
     };
-    last_outcome = execute_handler(&handler_input).unwrap_or_else(crate::types::NodeOutcome::fail);
+    last_outcome = execute_handler(&handler_input).unwrap_or_else(crate::types::NodeOutcome::error);
     apply_context_updates(&mut state.context, &last_outcome);
     state.completed_nodes.push(state.current_node_id.clone());
     state
