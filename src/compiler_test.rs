@@ -122,3 +122,43 @@ fn compile_pre_push_dot() {
   let graph = compile_attractor_graph(&ast, None).unwrap();
   assert!(graph.name().contains("compiled"));
 }
+
+#[test]
+fn compile_rejects_invalid_entry_node_id() {
+  let dot = r#"
+    digraph G {
+      graph [goal="test"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      start -> exit
+    }
+  "#;
+  let ast = parse_dot(dot).unwrap();
+  match compile_attractor_graph(&ast, Some("not_a_node")) {
+    Ok(_) => panic!("expected compile to fail (invalid entry node id)"),
+    Err(e) => {
+      assert!(
+        e.contains("not_a_node") && e.contains("not a node"),
+        "error should mention invalid entry node: {}",
+        e
+      );
+    }
+  }
+}
+
+#[test]
+fn compile_accepts_valid_entry_node_id_for_resume() {
+  let dot = r#"
+    digraph G {
+      graph [goal="test"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      start -> exit
+    }
+  "#;
+  let ast = parse_dot(dot).unwrap();
+  let graph = compile_attractor_graph(&ast, Some("exit")).unwrap();
+  assert!(graph.name().contains("compiled"));
+  assert!(graph.find_node_by_name("start").is_some());
+  assert!(graph.find_node_by_name("exit").is_some());
+}
