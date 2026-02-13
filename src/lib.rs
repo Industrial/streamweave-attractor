@@ -17,9 +17,6 @@ mod compiler_test;
 pub mod dot_parser;
 #[cfg(test)]
 mod dot_parser_test;
-pub mod graph;
-#[cfg(test)]
-mod graph_test;
 pub mod nodes;
 pub mod runner;
 #[cfg(test)]
@@ -27,7 +24,6 @@ mod runner_test;
 pub mod types;
 
 pub use compiler::compile_attractor_graph;
-pub use graph::attractor_graph;
 pub use nodes::AttractorResult;
 pub use runner::run_compiled_workflow;
 pub use types::{AttractorGraph, AttractorNode, ExecutionState, NodeOutcome};
