@@ -9,7 +9,7 @@ repos:
     hooks:
       - id: pre-push
         name: pre-push (format + tests)
-        entry: bun run ci:pre-push
+        entry: bin/pre-commit
         language: system
         stages: [pre-push]
         pass_filenames: false
