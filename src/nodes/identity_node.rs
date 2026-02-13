@@ -10,8 +10,11 @@ use tokio_stream::wrappers::ReceiverStream;
 /// Pass-through node that forwards each input item to output unchanged.
 /// Used as placeholder for start and exit nodes in Phase 1 compiled graph.
 pub struct IdentityNode {
+  /// Node display name.
   name: String,
+  /// Input port names.
   input_ports: Vec<String>,
+  /// Output port names.
   output_ports: Vec<String>,
 }
 

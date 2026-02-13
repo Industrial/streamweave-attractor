@@ -10,8 +10,11 @@ use tokio_stream::wrappers::ReceiverStream;
 
 /// Routes NodeOutcome items: Success/PartialSuccess -> "success" port, Fail/Retry -> "fail" port.
 pub struct OutcomeRouterNode {
+  /// Node display name.
   name: String,
+  /// Input port names.
   input_ports: Vec<String>,
+  /// Output port names.
   output_ports: Vec<String>,
 }
 

@@ -35,7 +35,9 @@ pub(crate) fn apply_context_updates(context: &mut HashMap<String, String>, outco
 
 /// Result of running the execution loop on one state.
 pub(crate) enum RunLoopResult {
+  /// Pipeline completed successfully.
   Ok(AttractorResult),
+  /// Pipeline failed with error message.
   Err(String),
 }
 

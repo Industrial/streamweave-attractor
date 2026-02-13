@@ -9,6 +9,7 @@ use crate::types::AttractorGraph;
 use streamweave::graph_builder::GraphBuilder;
 use streamweave::node::Node;
 
+/// Returns true if the condition string matches `outcome=success`.
 fn condition_is_outcome_success(cond: Option<&str>) -> bool {
   cond
     .map(|c| {
@@ -18,6 +19,7 @@ fn condition_is_outcome_success(cond: Option<&str>) -> bool {
     .unwrap_or(false)
 }
 
+/// Returns true if the condition string matches `outcome=fail`.
 fn condition_is_outcome_fail(cond: Option<&str>) -> bool {
   cond
     .map(|c| {
@@ -92,15 +94,15 @@ pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::grap
       let fail_edge = out_edges
         .iter()
         .find(|e| condition_is_outcome_fail(e.condition.as_deref()));
-      if success_edge.is_some() && fail_edge.is_some() {
+      if let (Some(se), Some(fe)) = (success_edge, fail_edge) {
         let router_id = format!("{}_router", from);
         builder = builder.add_node(
           &router_id,
           Box::new(OutcomeRouterNode::new(&router_id)) as Box<dyn Node>,
         );
         builder = builder.connect(from, "out", &router_id, "in");
-        builder = builder.connect(&router_id, "success", &success_edge.unwrap().to_node, "in");
-        builder = builder.connect(&router_id, "fail", &fail_edge.unwrap().to_node, "in");
+        builder = builder.connect(&router_id, "success", &se.to_node, "in");
+        builder = builder.connect(&router_id, "fail", &fe.to_node, "in");
         routed_sources.insert(from.clone());
         continue;
       }

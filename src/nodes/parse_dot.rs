@@ -16,8 +16,11 @@ pub(crate) fn process_dot(s: &str) -> Result<crate::types::AttractorGraph, Strin
 
 /// Result of processing one parse-dot input item.
 pub(crate) enum ParseDotItemResult {
+  /// Parsed DOT produced an AttractorGraph.
   Graph(crate::types::AttractorGraph),
+  /// Parse failed with error message.
   ParseError(String),
+  /// Input was not a string.
   WrongType,
 }
 

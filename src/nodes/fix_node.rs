@@ -12,6 +12,7 @@ use tokio_stream::wrappers::ReceiverStream;
 
 /// Stub fix node: forwards one trigger per input (for retry loop).
 pub struct FixNode {
+  /// Node display name.
   name: String,
 }
 
@@ -55,7 +56,7 @@ impl Node for FixNode {
       let (tx, rx) = mpsc::channel(16);
       tokio::spawn(async move {
         let mut s = in_stream;
-        while let Some(_) = s.next().await {
+        while s.next().await.is_some() {
           let _ = tx.send(Arc::new(()) as Arc<dyn Any + Send + Sync>).await;
         }
       });

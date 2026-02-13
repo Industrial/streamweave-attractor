@@ -15,7 +15,9 @@ use crate::types::NodeOutcome;
 
 /// Node that runs a shell command and emits NodeOutcome.
 pub struct ExecNode {
+  /// Node display name.
   name: String,
+  /// Shell command to execute.
   command: String,
 }
 
@@ -64,7 +66,7 @@ impl Node for ExecNode {
       let (_err_tx, err_rx) = mpsc::channel(16);
       tokio::spawn(async move {
         let mut s = in_stream;
-        while let Some(_) = s.next().await {
+        while s.next().await.is_some() {
           let outcome = tokio::task::spawn_blocking({
             let c = cmd.clone();
             move || match Command::new("sh").arg("-c").arg(&c).output() {

@@ -1,6 +1,6 @@
 //! CLI: Run an Attractor pipeline from a .dot file.
 //!
-//! Usage: run_dot <path-to-dot-file>
+//! Usage: `run_dot PATH`
 //! Example: run_dot examples/workflows/pre-push.dot
 
 use std::env;
