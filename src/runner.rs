@@ -11,7 +11,7 @@ use std::sync::Arc;
 /// runs until the graph produces output on the "output" port, then returns the first output item.
 ///
 /// The graph must have been built with `input` and `output` port names (as produced by
-/// [crate::compiler::compile_attractor_graph]).
+/// [crate::compile_attractor_graph]).
 pub async fn run_streamweave_graph(
   mut graph: streamweave::graph::Graph,
 ) -> Result<Option<Arc<dyn std::any::Any + Send + Sync>>, String> {
@@ -42,7 +42,7 @@ pub async fn run_streamweave_graph(
 }
 
 /// Compiles the Attractor graph to a StreamWeave graph, runs it, and returns an [AttractorResult].
-/// Uses [compile_attractor_graph] and [run_streamweave_graph]. Initial context includes the graph goal.
+/// Uses [crate::compile_attractor_graph] and [crate::run_streamweave_graph]. Initial context includes the graph goal.
 pub async fn run_compiled_graph(ast: &AttractorGraph) -> Result<AttractorResult, String> {
   let mut graph = crate::compiler::compile_attractor_graph(ast)?;
   let mut ctx = std::collections::HashMap::new();
