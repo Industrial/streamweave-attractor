@@ -13,7 +13,7 @@ use std::fs;
 use std::process;
 use streamweave_attractor::{dot_parser, run_compiled_workflow};
 use tracing::info;
-use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
 #[tokio::main]
 async fn main() {
