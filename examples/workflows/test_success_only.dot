@@ -5,5 +5,6 @@ digraph TestSuccessOnly {
   exit [shape=Msquare, label="Exit"]
   ok [shape=box, type=exec, label="Succeed", command="true"]
   start -> ok
-  ok -> exit
+  ok -> exit [label="success", condition="outcome=success"]
+  ok -> exit [label="failure", condition="outcome=fail"]
 }

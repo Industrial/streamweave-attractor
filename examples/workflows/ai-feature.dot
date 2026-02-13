@@ -84,18 +84,26 @@ digraph AIFeature {
   ]
 
   start -> explore_ideas
-  explore_ideas -> implement_idea
-  implement_idea -> create_branch
-  create_branch -> commit
-  commit -> pre_push
+  explore_ideas -> implement_idea [label="success", condition="outcome=success"]
+  explore_ideas -> exit [label="failure", condition="outcome=fail"]
+  implement_idea -> create_branch [label="success", condition="outcome=success"]
+  implement_idea -> exit [label="failure", condition="outcome=fail"]
+  create_branch -> commit [label="success", condition="outcome=success"]
+  create_branch -> exit [label="failure", condition="outcome=fail"]
+  commit -> pre_push [label="success", condition="outcome=success"]
+  commit -> exit [label="failure", condition="outcome=fail"]
   pre_push -> test_coverage [label="success", condition="outcome=success"]
   pre_push -> fix_pre_push [label="failure", condition="outcome=fail"]
-  fix_pre_push -> pre_push
+  fix_pre_push -> pre_push [label="success", condition="outcome=success"]
+  fix_pre_push -> exit [label="failure", condition="outcome=fail"]
   test_coverage -> ensure_clean [label="success", condition="outcome=success"]
   test_coverage -> fix_test_coverage [label="failure", condition="outcome=fail"]
-  fix_test_coverage -> test_coverage
+  fix_test_coverage -> test_coverage [label="success", condition="outcome=success"]
+  fix_test_coverage -> exit [label="failure", condition="outcome=fail"]
   ensure_clean -> git_push [label="success", condition="outcome=success"]
   ensure_clean -> commit [label="failure", condition="outcome=fail"]
-  git_push -> checkout_main
-  checkout_main -> exit
+  git_push -> checkout_main [label="success", condition="outcome=success"]
+  git_push -> exit [label="failure", condition="outcome=fail"]
+  checkout_main -> exit [label="success", condition="outcome=success"]
+  checkout_main -> exit [label="failure", condition="outcome=fail"]
 }

@@ -30,8 +30,10 @@ digraph TestOutError {
   ]
 
   start -> ok
-  ok -> fail_step
+  ok -> fail_step [label="success", condition="outcome=success"]
+  ok -> exit [label="failure", condition="outcome=fail"]
   fail_step -> exit [label="success", condition="outcome=success"]
   fail_step -> fix [label="failure", condition="outcome=fail"]
-  fix -> exit
+  fix -> exit [label="success", condition="outcome=success"]
+  fix -> exit [label="failure", condition="outcome=fail"]
 }

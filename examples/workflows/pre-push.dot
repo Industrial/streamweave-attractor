@@ -37,8 +37,10 @@ digraph PrePush {
   start -> pre_push
   pre_push -> test_coverage [label="success", condition="outcome=success"]
   pre_push -> fix_pre_push [label="failure", condition="outcome=fail"]
-  fix_pre_push -> pre_push
+  fix_pre_push -> pre_push [label="success", condition="outcome=success"]
+  fix_pre_push -> exit [label="failure", condition="outcome=fail"]
   test_coverage -> exit [label="success", condition="outcome=success"]
   test_coverage -> fix_test_coverage [label="failure", condition="outcome=fail"]
-  fix_test_coverage -> test_coverage
+  fix_test_coverage -> test_coverage [label="success", condition="outcome=success"]
+  fix_test_coverage -> exit [label="failure", condition="outcome=fail"]
 }

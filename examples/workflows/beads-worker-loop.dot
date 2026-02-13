@@ -23,11 +23,14 @@ digraph BeadsWorkerLoop {
   status_done [shape=box, label="Close task", prompt="Close the task: run devenv shell -- bd close $ready_task_id --reason \"Done\" --json. Exit 0. The pipeline will then return to Check ready."]
 
   start -> check_ready
-  check_ready -> status_in_progress [label="has_tasks", condition="has_tasks=true"]
-  check_ready -> exit [label="no_tasks", condition="has_tasks=false"]
-  check_ready -> exit [label="default"]
-  status_in_progress -> implement
-  implement -> git_commit
-  git_commit -> status_done
-  status_done -> check_ready
+  check_ready -> status_in_progress [label="has_tasks", condition="outcome=success"]
+  check_ready -> exit [label="no_tasks", condition="outcome=fail"]
+  status_in_progress -> implement [label="success", condition="outcome=success"]
+  status_in_progress -> exit [label="failure", condition="outcome=fail"]
+  implement -> git_commit [label="success", condition="outcome=success"]
+  implement -> exit [label="failure", condition="outcome=fail"]
+  git_commit -> status_done [label="success", condition="outcome=success"]
+  git_commit -> exit [label="failure", condition="outcome=fail"]
+  status_done -> check_ready [label="success", condition="outcome=success"]
+  status_done -> exit [label="failure", condition="outcome=fail"]
 }
