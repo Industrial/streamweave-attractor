@@ -1,8 +1,9 @@
 //! Payload type that flows through the compiled StreamWeave graph.
 //! Carries RunContext and the latest NodeOutcome so context flows start→nodes→exit
 //! and context_updates from outcomes are applied along the path.
+//! Tracks current_node_id and completed_nodes for checkpoint/resume.
 
-use super::{NodeOutcome, RunContext};
+use super::{Checkpoint, NodeOutcome, RunContext};
 
 /// Payload flowing through the compiled graph: context plus optional last outcome.
 /// Nodes that produce outcomes (Exec, Codergen) merge outcome.context_updates into context.
@@ -10,18 +11,58 @@ use super::{NodeOutcome, RunContext};
 pub struct GraphPayload {
   pub context: RunContext,
   pub outcome: Option<NodeOutcome>,
+  /// Node id that last produced this payload (for checkpoint).
+  pub current_node_id: String,
+  /// Ordered list of node ids that have completed (for checkpoint).
+  pub completed_nodes: Vec<String>,
 }
 
 impl GraphPayload {
-  pub fn new(context: RunContext, outcome: Option<NodeOutcome>) -> Self {
-    Self { context, outcome }
+  pub fn new(
+    context: RunContext,
+    outcome: Option<NodeOutcome>,
+    current_node_id: String,
+    completed_nodes: Vec<String>,
+  ) -> Self {
+    Self {
+      context,
+      outcome,
+      current_node_id,
+      completed_nodes,
+    }
   }
 
   /// Initial payload for graph entry (e.g. from start node).
-  pub fn initial(context: RunContext) -> Self {
+  pub fn initial(context: RunContext, start_node_id: impl Into<String>) -> Self {
+    let start = start_node_id.into();
     Self {
       context,
       outcome: None,
+      current_node_id: start.clone(),
+      completed_nodes: vec![],
+    }
+  }
+
+  /// Initial payload when resuming from a checkpoint.
+  pub fn from_checkpoint(cp: &Checkpoint) -> Self {
+    Self {
+      context: cp.context.clone(),
+      outcome: None,
+      current_node_id: cp.current_node_id.clone(),
+      completed_nodes: cp.completed_nodes.clone(),
+    }
+  }
+
+  /// Returns a new payload with this node recorded as current and completed (for nodes that emit).
+  pub fn with_node_completed(&self, node_id: impl Into<String>) -> Self {
+    let node_id = node_id.into();
+    let mut completed = self.completed_nodes.clone();
+    completed.push(node_id.clone());
+    Self {
+      context: self.context.clone(),
+      outcome: self.outcome.clone(),
+      current_node_id: node_id,
+      completed_nodes: completed,
     }
   }
 }

@@ -58,15 +58,8 @@ pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::grap
     .map(|n| n.id.clone())
     .ok_or("missing exit node")?;
 
-  // Nodes that are targets of outcome=fail edges (fix nodes). Back-edges from these
-  // to the exec node would create cycles; StreamWeave is DAG-only, so we omit them.
-  // Retry is handled by the runner re-invoking the graph (hybrid approach).
-  let fix_node_ids: std::collections::HashSet<String> = ast
-    .edges
-    .iter()
-    .filter(|e| condition_is_outcome_fail(e.condition.as_deref()))
-    .map(|e| e.to_node.clone())
-    .collect();
+  // StreamWeave's dataflow execution supports cycles (one channel per edge, one task per node).
+  // Include all edges including fix→exec back-edges so fix-and-retry loops run in-graph.
 
   let mut builder = GraphBuilder::new("compiled_attractor");
 
@@ -111,10 +104,6 @@ pub fn compile_attractor_graph(ast: &AttractorGraph) -> Result<streamweave::grap
         routed_sources.insert(from.clone());
         continue;
       }
-    }
-    // Omit fix→exec back-edges to keep the graph a DAG (see fix_node_ids).
-    if fix_node_ids.contains(&e.from_node) && routed_sources.contains(&e.to_node) {
-      continue;
     }
     builder = builder.connect(&e.from_node, "out", &e.to_node, "in");
   }
