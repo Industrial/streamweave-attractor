@@ -11,6 +11,8 @@ use tokio_stream::wrappers::ReceiverStream;
 use tracing::instrument;
 
 /// StreamWeave node that validates an AttractorGraph.
+/// Allowed dead in lib until interpretive pipeline is removed (Simplify validate_graph task).
+#[allow(dead_code)]
 pub struct ValidateGraphNode {
   /// Node display name.
   name: String,
@@ -20,6 +22,7 @@ pub struct ValidateGraphNode {
   output_ports: Vec<String>,
 }
 
+#[allow(dead_code)]
 impl ValidateGraphNode {
   /// Creates a new ValidateGraphNode with the given display name.
   pub fn new(name: impl Into<String>) -> Self {
