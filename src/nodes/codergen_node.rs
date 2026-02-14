@@ -1,4 +1,4 @@
-//! Codergen node: runs ATTRACTOR_AGENT_CMD (or default cursor-agent) with prompt as stdin,
+//! Codergen node: runs the configured agent command with prompt as stdin,
 //! emits GraphPayload with NodeOutcome and updated context (context_updates applied).
 
 use crate::agent_run;
@@ -7,7 +7,6 @@ use crate::types::{GraphPayload, NodeOutcome, OutcomeStatus, RunContext};
 use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
-use std::env;
 use std::pin::Pin;
 use std::sync::Arc;
 use streamweave::node::{InputStreams, Node, NodeExecutionError, OutputStreams};
@@ -21,13 +20,24 @@ pub struct CodergenNode {
   name: String,
   /// Prompt sent to the agent as stdin.
   prompt: String,
+  /// Agent command (e.g. cursor-agent). Required.
+  agent_cmd: Option<String>,
+  /// Stage directory for outcome.json.
+  stage_dir: Option<std::path::PathBuf>,
 }
 
 impl CodergenNode {
-  pub fn new(name: impl Into<String>, prompt: impl Into<String>) -> Self {
+  pub fn new(
+    name: impl Into<String>,
+    prompt: impl Into<String>,
+    agent_cmd: Option<String>,
+    stage_dir: Option<std::path::PathBuf>,
+  ) -> Self {
     Self {
       name: name.into(),
       prompt: prompt.into(),
+      agent_cmd,
+      stage_dir,
     }
   }
 }
@@ -63,14 +73,13 @@ impl Node for CodergenNode {
   > {
     let name = self.name.clone();
     let prompt = self.prompt.clone();
+    let agent_cmd = self.agent_cmd.clone();
+    let stage_dir = self.stage_dir.clone();
     Box::pin(async move {
       tracing::trace!(node = %name, "CodergenNode executing");
       let in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
       let (out_tx, out_rx) = mpsc::channel(16);
       let (err_tx, err_rx) = mpsc::channel(16);
-      let agent_cmd = env::var("ATTRACTOR_AGENT_CMD").unwrap_or_else(|_| {
-        "cursor-agent --print true --output-format stream-json --stream-partial-output --model auto --force --workspace .".to_string()
-      });
       tokio::spawn(async move {
         let mut s = in_stream;
         if let Some(item) = s.next().await {
@@ -84,11 +93,24 @@ impl Node for CodergenNode {
             .as_ref()
             .map(|p| (p.current_node_id.clone(), p.completed_nodes.clone()))
             .unwrap_or_else(|| (String::new(), vec![]));
-          let cmd = agent_cmd.clone();
-          let p = prompt.clone();
-          let outcome = tokio::task::spawn_blocking(move || agent_run::run_agent(&cmd, &p))
-            .await
-            .unwrap_or_else(|e| NodeOutcome::error(format!("{}", e)));
+          let outcome = match &agent_cmd {
+            None => {
+              tracing::error!(node = %name, "attractor agent cmd is not set");
+              NodeOutcome::error("ATTRACTOR_AGENT_CMD (or --agent-cmd) is not set")
+            }
+            Some(c) if c.is_empty() => {
+              tracing::error!(node = %name, "attractor agent cmd is not set");
+              NodeOutcome::error("ATTRACTOR_AGENT_CMD (or --agent-cmd) is not set")
+            }
+            Some(cmd) => {
+              let cmd = cmd.clone();
+              let p = prompt.clone();
+              let dir = stage_dir.clone();
+              tokio::task::spawn_blocking(move || agent_run::run_agent(&cmd, &p, dir.as_deref()))
+                .await
+                .unwrap_or_else(|e| NodeOutcome::error(format!("{}", e)))
+            }
+          };
           let is_success = outcome.status == OutcomeStatus::Success
             || outcome.status == OutcomeStatus::PartialSuccess;
           let updated = apply_updates(&ApplyContextUpdatesInput {

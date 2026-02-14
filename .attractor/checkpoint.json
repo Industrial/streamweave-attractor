@@ -1,0 +1,12 @@
+{
+  "context": {
+    "goal": "test",
+    "graph.goal": "test"
+  },
+  "current_node_id": "exit",
+  "completed_nodes": [
+    "start",
+    "exit",
+    "exit"
+  ]
+}

@@ -49,6 +49,10 @@ pub struct RunOptions<'a> {
   pub run_dir: Option<&'a Path>,
   /// If set, resume from this checkpoint (entry node and initial payload from checkpoint).
   pub resume_checkpoint: Option<&'a Checkpoint>,
+  /// Command for agent/codergen nodes (e.g. cursor-agent). Required if the graph has codergen nodes.
+  pub agent_cmd: Option<String>,
+  /// Directory for agent outcome.json and staging.
+  pub stage_dir: Option<std::path::PathBuf>,
 }
 
 /// Compiles the Attractor graph to a StreamWeave graph, runs it, and returns an [AttractorResult].
@@ -60,7 +64,12 @@ pub async fn run_compiled_graph(
   let entry_node_id = options
     .resume_checkpoint
     .map(|cp| cp.current_node_id.as_str());
-  let mut graph = crate::compiler::compile_attractor_graph(ast, entry_node_id)?;
+  let mut graph = crate::compiler::compile_attractor_graph(
+    ast,
+    entry_node_id,
+    options.agent_cmd.as_deref(),
+    options.stage_dir.as_deref(),
+  )?;
 
   let initial = match options.resume_checkpoint {
     Some(cp) => GraphPayload::from_checkpoint(cp),

@@ -5,6 +5,7 @@
 //! Phase 3: Direct port routing: success -> "out", error -> "error" (no router).
 //! Phase 4: Multiple edges to same (node, port) are merged via StreamWeave MergeNode.
 
+use std::path::Path;
 use crate::nodes::{CodergenNode, ExecNode, IdentityNode, validate_graph};
 use crate::types::AttractorGraph;
 use std::collections::HashMap;
@@ -39,6 +40,8 @@ fn condition_is_outcome_error(cond: Option<&str>) -> bool {
 pub fn compile_attractor_graph(
   ast: &AttractorGraph,
   entry_node_id: Option<&str>,
+  agent_cmd: Option<&str>,
+  stage_dir: Option<&Path>,
 ) -> Result<streamweave::graph::Graph, String> {
   info!("compiling AttractorGraph to StreamWeave graph");
   validate_graph::validate(ast)?;
@@ -95,7 +98,9 @@ pub fn compile_attractor_graph(
       }
       _ => {
         let prompt = node.prompt.as_deref().unwrap_or("").to_string();
-        Box::new(CodergenNode::new(&node.id, prompt))
+        let cmd = agent_cmd.map(String::from);
+        let dir = stage_dir.map(std::path::PathBuf::from);
+        Box::new(CodergenNode::new(&node.id, prompt, cmd, dir))
       }
     };
     builder = builder.add_node(node_id, sw_node);

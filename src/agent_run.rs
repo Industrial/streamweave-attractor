@@ -1,22 +1,16 @@
-//! Agent invocation: run ATTRACTOR_AGENT_CMD with prompt as stdin, read outcome.json.
+//! Agent invocation: run the agent command (agent_cmd option) with prompt as stdin, read outcome.json.
 //! Shared by runner and CodergenNode.
 
 use crate::types::NodeOutcome;
 use std::collections::HashMap;
-use std::env;
 use std::fs;
 use std::io::Write;
 use std::process::Command;
 
-/// Reads outcome.json from stage_dir (or ATTRACTOR_STAGE_DIR or .) and returns context_updates.
-pub(crate) fn read_outcome_json(stage_dir: Option<&str>) -> Option<HashMap<String, String>> {
+/// Reads outcome.json from stage_dir. Returns context_updates if present.
+pub(crate) fn read_outcome_json(stage_dir: Option<&std::path::Path>) -> Option<HashMap<String, String>> {
   let base = stage_dir
     .map(std::path::PathBuf::from)
-    .or_else(|| {
-      env::var("ATTRACTOR_STAGE_DIR")
-        .ok()
-        .map(std::path::PathBuf::from)
-    })
     .unwrap_or_else(|| std::path::PathBuf::from("."));
   let path = base.join("outcome.json");
   if !path.exists() {
@@ -36,11 +30,11 @@ pub(crate) fn read_outcome_json(stage_dir: Option<&str>) -> Option<HashMap<Strin
 
 /// Runs the agent command with prompt as stdin; returns NodeOutcome based on exit code.
 /// Used by the compiled workflow and by CodergenNode.
-pub(crate) fn run_agent(agent_cmd: &str, prompt: &str) -> NodeOutcome {
+pub(crate) fn run_agent(agent_cmd: &str, prompt: &str, stage_dir: Option<&std::path::Path>) -> NodeOutcome {
   let parts: Vec<&str> = agent_cmd.split_whitespace().collect();
   let (bin, args) = match parts.split_first() {
     Some((b, a)) => (b, a),
-    None => return NodeOutcome::error("ATTRACTOR_AGENT_CMD is empty"),
+    None => return NodeOutcome::error("agent_cmd is empty"),
   };
 
   match Command::new(bin)
@@ -59,7 +53,7 @@ pub(crate) fn run_agent(agent_cmd: &str, prompt: &str) -> NodeOutcome {
         Ok(status) => {
           if status.success() {
             let mut outcome = NodeOutcome::success("agent completed");
-            if let Some(updates) = read_outcome_json(None) {
+            if let Some(updates) = read_outcome_json(stage_dir) {
               outcome.context_updates = updates;
             }
             outcome

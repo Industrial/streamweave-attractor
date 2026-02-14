@@ -5,17 +5,12 @@
 //!
 //! Usage: `run_dot [OPTIONS] <path-to-dot-file>`
 //! Example: run_dot examples/workflows/pre-push.dot
-//!          run_dot --run-dir .attractor_run examples/workflows/pre-push.dot
-//!          run_dot --resume .attractor_run examples/workflows/pre-push.dot
 //!
-//! Options:
-//!   --run-dir DIR   Write checkpoint to DIR/checkpoint.json on successful exit.
-//!   --resume DIR    Resume from checkpoint in DIR (loads DIR/checkpoint.json).
-//!
-//! Checkpoint is saved only at successful pipeline exit (no mid-run crash recovery).
+//! Checkpoint is written to .attractor/checkpoint.json on success; resume is automatic from that file when present.
 //!
 //! Set RUST_LOG=streamweave_attractor=trace for TRACE-level span enter/exit and events.
 
+use clap::Parser;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -25,14 +20,35 @@ use streamweave_attractor::{RunOptions, dot_parser, run_compiled_graph};
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
-fn print_usage() {
-  eprintln!("Usage: run_dot [OPTIONS] <path-to-dot-file>");
-  eprintln!("Options:");
-  eprintln!("  --run-dir DIR   Write checkpoint to DIR/checkpoint.json on successful exit");
-  eprintln!("  --resume DIR    Resume from checkpoint in DIR (loads DIR/checkpoint.json)");
-  eprintln!("Example: run_dot examples/workflows/pre-push.dot");
-  eprintln!("         run_dot --run-dir .attractor_run examples/workflows/pre-push.dot");
-  eprintln!("         run_dot --resume .attractor_run examples/workflows/pre-push.dot");
+const RUN_DIR: &str = ".attractor";
+
+/// Run an Attractor pipeline from a .dot file.
+///
+/// Environment variables (see --help for ATTRACTOR_AGENT_CMD and ATTRACTOR_STAGE_DIR).
+#[derive(Parser, Debug)]
+#[command(name = "run_dot")]
+#[command(
+  after_help = r#"Environment variables (override --agent-cmd and --stage-dir when set):
+  ATTRACTOR_AGENT_CMD   Command for agent/codergen nodes (e.g. cursor-agent). When set, agent steps
+                        run this with prompt as stdin; outcome read from ATTRACTOR_STAGE_DIR.
+  ATTRACTOR_STAGE_DIR   Directory for outcome.json and staging (default: .attractor).
+
+Examples:
+  run_dot examples/workflows/pre-push.dot
+  run_dot --stage-dir /tmp/stage examples/workflows/pre-push.dot"#
+)]
+struct Args {
+  /// Command for agent/codergen nodes (e.g. cursor-agent). Overridden by ATTRACTOR_AGENT_CMD if set.
+  #[arg(long, value_name = "CMD")]
+  agent_cmd: Option<String>,
+
+  /// Directory for outcome.json and staging. Overridden by ATTRACTOR_STAGE_DIR if set. Default: .attractor
+  #[arg(long, value_name = "DIR", default_value = RUN_DIR)]
+  stage_dir: PathBuf,
+
+  /// Path to the .dot workflow file
+  #[arg(value_name = "path-to-dot-file")]
+  dot_path: PathBuf,
 }
 
 #[tokio::main]
@@ -43,75 +59,25 @@ async fn main() {
     .init();
 
   info!("run_dot starting");
-  let args: Vec<String> = env::args().collect();
-  let mut run_dir: Option<PathBuf> = None;
-  let mut resume_dir: Option<PathBuf> = None;
-  let mut dot_path: Option<String> = None;
+  let args = Args::parse();
 
-  let mut i = 1;
-  while i < args.len() {
-    match args[i].as_str() {
-      "--run-dir" => {
-        i += 1;
-        if i >= args.len() {
-          eprintln!("Error: --run-dir requires a directory");
-          print_usage();
-          process::exit(1);
-        }
-        run_dir = Some(PathBuf::from(&args[i]));
-        i += 1;
-      }
-      "--resume" => {
-        i += 1;
-        if i >= args.len() {
-          eprintln!("Error: --resume requires a directory");
-          print_usage();
-          process::exit(1);
-        }
-        resume_dir = Some(PathBuf::from(&args[i]));
-        i += 1;
-      }
-      s if !s.starts_with('-') => {
-        if dot_path.is_some() {
-          eprintln!("Error: unexpected argument {}", s);
-          print_usage();
-          process::exit(1);
-        }
-        dot_path = Some(s.to_string());
-        i += 1;
-      }
-      _ => {
-        eprintln!("Error: unknown option {}", args[i]);
-        print_usage();
-        process::exit(1);
-      }
-    }
-  }
+  // Env vars override flags. These are the values used by the program (not read from env again).
+  let agent_cmd = env::var("ATTRACTOR_AGENT_CMD").ok().or_else(|| args.agent_cmd.clone());
+  let stage_dir = env::var("ATTRACTOR_STAGE_DIR")
+    .ok()
+    .map(PathBuf::from)
+    .or_else(|| Some(args.stage_dir.clone()))
+    .unwrap_or_else(|| PathBuf::from(RUN_DIR));
+  let run_dir = PathBuf::from(RUN_DIR);
+  let resume_checkpoint = checkpoint_io::load_checkpoint(&run_dir.join(CHECKPOINT_FILENAME)).ok();
 
-  let path = match dot_path {
-    Some(p) => p,
-    None => {
-      eprintln!("Error: missing path to .dot file");
-      print_usage();
-      process::exit(1);
-    }
-  };
+  info!(agent_cmd = ?agent_cmd, stage_dir = %stage_dir.display(), run_dir = %run_dir.display(), resume = resume_checkpoint.is_some(), "options (env or flags)");
 
-  let resume_checkpoint = resume_dir.map(|dir| {
-    let cp_path = dir.join(CHECKPOINT_FILENAME);
-    match checkpoint_io::load_checkpoint(&cp_path) {
-      Ok(cp) => cp,
-      Err(e) => {
-        eprintln!("Error loading checkpoint from {}: {}", cp_path.display(), e);
-        process::exit(1);
-      }
-    }
-  });
-
-  let dot = match fs::read_to_string(&path) {
+  let path = &args.dot_path;
+  let dot = match fs::read_to_string(path) {
     Ok(s) => s,
     Err(e) => {
-      eprintln!("Error reading {}: {}", path, e);
+      eprintln!("Error reading {}: {}", path.display(), e);
       process::exit(1);
     }
   };
@@ -125,8 +91,10 @@ async fn main() {
   };
 
   let options = RunOptions {
-    run_dir: run_dir.as_deref(),
+    run_dir: Some(run_dir.as_path()),
     resume_checkpoint: resume_checkpoint.as_ref(),
+    agent_cmd,
+    stage_dir: Some(stage_dir),
   };
 
   let r = match run_compiled_graph(&ast, options).await {

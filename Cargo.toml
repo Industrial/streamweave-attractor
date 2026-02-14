@@ -13,6 +13,7 @@ categories = ["asynchronous", "data-structures"]
 
 [dependencies]
 # Pin to fixed version for RUSTSEC-2026-0007 (BytesMut::reserve integer overflow)
+clap = { version = "4", features = ["derive"] }
 bytes = ">=1.11.1"
 streamweave = "0.10.1"
 tracing = "0.1"

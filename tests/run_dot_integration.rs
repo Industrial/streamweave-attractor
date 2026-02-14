@@ -89,6 +89,8 @@ async fn pre_push_dot_via_run_compiled_graph() {
     streamweave_attractor::RunOptions {
       run_dir: None,
       resume_checkpoint: None,
+      agent_cmd: None,
+      stage_dir: None,
     },
   )
   .await
@@ -123,6 +125,8 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
     streamweave_attractor::RunOptions {
       run_dir: None,
       resume_checkpoint: None,
+      agent_cmd: None,
+      stage_dir: None,
     },
   )
   .await
@@ -158,6 +162,8 @@ async fn run_dir_writes_checkpoint_resume_completes() {
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
       resume_checkpoint: None,
+      agent_cmd: None,
+      stage_dir: None,
     },
   )
   .await
@@ -181,6 +187,8 @@ async fn run_dir_writes_checkpoint_resume_completes() {
     streamweave_attractor::RunOptions {
       run_dir: None,
       resume_checkpoint: Some(&cp),
+      agent_cmd: None,
+      stage_dir: None,
     },
   )
   .await

@@ -15,7 +15,7 @@ fn read_outcome_json_returns_context_updates() {
   )
   .unwrap();
 
-  let updates = read_outcome_json(Some(stage_dir.to_str().unwrap()));
+  let updates = read_outcome_json(Some(stage_dir));
   assert!(updates.is_some());
   let updates = updates.unwrap();
   assert_eq!(updates.get("has_tasks").map(String::as_str), Some("true"));
@@ -31,7 +31,7 @@ fn read_outcome_json_returns_none_when_file_missing() {
   let stage_dir = dir.path();
   assert!(!stage_dir.join("outcome.json").exists());
 
-  let updates = read_outcome_json(Some(stage_dir.to_str().unwrap()));
+  let updates = read_outcome_json(Some(stage_dir));
   assert!(updates.is_none());
 }
 
@@ -40,7 +40,7 @@ fn read_outcome_json_returns_none_when_invalid_json() {
   let dir = tempfile::tempdir().unwrap();
   let outcome_path = dir.path().join("outcome.json");
   std::fs::write(&outcome_path, "not json").unwrap();
-  let updates = read_outcome_json(Some(dir.path().to_str().unwrap()));
+  let updates = read_outcome_json(Some(dir.path()));
   assert!(updates.is_none());
 }
 
@@ -49,6 +49,6 @@ fn read_outcome_json_returns_none_when_no_context_updates_key() {
   let dir = tempfile::tempdir().unwrap();
   let outcome_path = dir.path().join("outcome.json");
   std::fs::write(&outcome_path, r#"{"other":{}}"#).unwrap();
-  let updates = read_outcome_json(Some(dir.path().to_str().unwrap()));
+  let updates = read_outcome_json(Some(dir.path()));
   assert!(updates.is_none());
 }

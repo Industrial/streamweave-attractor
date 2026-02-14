@@ -18,7 +18,7 @@ fn compile_rejects_exec_without_command() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  match compile_attractor_graph(&ast, None) {
+  match compile_attractor_graph(&ast, None, None, None) {
     Ok(_) => panic!("expected compile to fail (exec without command)"),
     Err(e) => {
       assert!(e.to_lowercase().contains("exec"));
@@ -43,7 +43,7 @@ fn compile_with_conditional_routing() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  let graph = compile_attractor_graph(&ast, None).unwrap();
+  let graph = compile_attractor_graph(&ast, None, None, None).unwrap();
   // Graph built with direct out/error ports for run
   assert!(graph.name().contains("compiled"));
 }
@@ -59,7 +59,7 @@ fn compile_trivial_start_exit() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  let graph = compile_attractor_graph(&ast, None).unwrap();
+  let graph = compile_attractor_graph(&ast, None, None, None).unwrap();
   // Trivial case may be built via graph! or builder
   assert!(graph.find_node_by_name("start").is_some());
   assert!(graph.find_node_by_name("exit").is_some());
@@ -76,7 +76,7 @@ async fn run_streamweave_graph_trivial_start_exit() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  let graph = compile_attractor_graph(&ast, None).unwrap();
+  let graph = compile_attractor_graph(&ast, None, None, None).unwrap();
   let initial = GraphPayload::initial(HashMap::new(), "start");
   let out = run_streamweave_graph(graph, initial).await.unwrap();
   // Identity path: one trigger in → one item out
@@ -92,7 +92,7 @@ fn compile_err_no_start() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  match compile_attractor_graph(&ast, None) {
+  match compile_attractor_graph(&ast, None, None, None) {
     Ok(_) => panic!("expected compile to fail (no start)"),
     Err(e) => assert!(e.to_lowercase().contains("start")),
   }
@@ -107,7 +107,7 @@ fn compile_err_no_exit() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  match compile_attractor_graph(&ast, None) {
+  match compile_attractor_graph(&ast, None, None, None) {
     Ok(_) => panic!("expected compile to fail (no exit)"),
     Err(e) => assert!(e.to_lowercase().contains("exit")),
   }
@@ -119,7 +119,7 @@ fn compile_pre_push_dot() {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/workflows/pre-push.dot");
   let dot = std::fs::read_to_string(&path).unwrap();
   let ast = parse_dot(&dot).unwrap();
-  let graph = compile_attractor_graph(&ast, None).unwrap();
+  let graph = compile_attractor_graph(&ast, None, None, None).unwrap();
   assert!(graph.name().contains("compiled"));
 }
 
@@ -134,7 +134,7 @@ fn compile_rejects_invalid_entry_node_id() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  match compile_attractor_graph(&ast, Some("not_a_node")) {
+  match compile_attractor_graph(&ast, Some("not_a_node"), None, None) {
     Ok(_) => panic!("expected compile to fail (invalid entry node id)"),
     Err(e) => {
       assert!(
@@ -157,7 +157,7 @@ fn compile_accepts_valid_entry_node_id_for_resume() {
     }
   "#;
   let ast = parse_dot(dot).unwrap();
-  let graph = compile_attractor_graph(&ast, Some("exit")).unwrap();
+  let graph = compile_attractor_graph(&ast, Some("exit"), None, None).unwrap();
   assert!(graph.name().contains("compiled"));
   assert!(graph.find_node_by_name("start").is_some());
   assert!(graph.find_node_by_name("exit").is_some());
