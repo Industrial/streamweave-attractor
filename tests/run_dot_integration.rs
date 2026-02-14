@@ -6,12 +6,19 @@
 use std::process::Command;
 
 fn run_run_dot(args: &[&str]) -> std::process::Output {
-  Command::new("cargo")
-    .args(["run", "--bin", "run_dot", "--"])
-    .args(args)
-    .output()
-    .expect("run cargo run --bin run_dot")
+  run_run_dot_with_env(args, &[])
 }
+
+/// Run run_dot with optional env vars. Each pair is (key, value); pass empty to inherit.
+fn run_run_dot_with_env(args: &[&str], env_add: &[(&str, &str)]) -> std::process::Output {
+  let mut cmd = Command::new("cargo");
+  cmd.args(["run", "--bin", "run_dot", "--"]).args(args);
+  for (k, v) in env_add {
+    cmd.env(k, v);
+  }
+  cmd.output().expect("run cargo run --bin run_dot")
+}
+
 
 #[test]
 fn run_dot_prints_usage_without_args() {
@@ -21,6 +28,7 @@ fn run_dot_prints_usage_without_args() {
   assert!(stderr.contains("Usage") || stderr.contains("usage"));
   assert!(stderr.contains("run_dot") || stderr.contains(".dot"));
 }
+
 
 #[test]
 fn run_dot_exits_1_for_missing_file() {
@@ -33,6 +41,7 @@ fn run_dot_exits_1_for_missing_file() {
     stderr
   );
 }
+
 
 #[test]
 fn run_dot_succeeds_with_minimal_start_exit_dot() {
@@ -61,6 +70,7 @@ fn run_dot_succeeds_with_minimal_start_exit_dot() {
   assert!(stdout.contains("Pipeline completed"));
   assert!(stdout.contains("Success") || stdout.contains("completed"));
 }
+
 
 #[test]
 fn run_dot_execution_log_cli_writes_log_file() {
@@ -94,6 +104,7 @@ fn run_dot_execution_log_cli_writes_log_file() {
   assert_eq!(log["goal"], "test");
   assert_eq!(log["final_status"], "success");
 }
+
 
 #[test]
 fn run_dot_execution_log_cli_default_path_under_stage_dir() {
@@ -131,6 +142,157 @@ fn run_dot_execution_log_cli_default_path_under_stage_dir() {
   assert_eq!(log["final_status"], "success");
 }
 
+
+#[test]
+fn run_dot_execution_log_env_1_uses_default_path() {
+  let dir = tempfile::tempdir().expect("temp dir");
+  let stage = dir.path().join("stage");
+  std::fs::create_dir_all(&stage).expect("create stage dir");
+  let path = dir.path().join("minimal.dot");
+  std::fs::write(
+    &path,
+    r#"digraph G {
+  graph [goal="test"]
+  start [shape=Mdiamond]
+  exit [shape=Msquare]
+  start -> exit
+}"#,
+  )
+  .expect("write dot");
+
+  let path_str = path.to_str().expect("path");
+  let stage_str = stage.to_str().expect("stage");
+  let out = run_run_dot_with_env(
+    &["--stage-dir", stage_str, path_str],
+    &[("ATTRACTOR_EXECUTION_LOG", "1")],
+  );
+  assert!(
+    out.status.success(),
+    "stderr: {} stdout: {}",
+    String::from_utf8_lossy(&out.stderr),
+    String::from_utf8_lossy(&out.stdout)
+  );
+  let default_log = stage.join("execution.log.json");
+  assert!(
+    default_log.exists(),
+    "ATTRACTOR_EXECUTION_LOG=1 should write to <stage_dir>/execution.log.json"
+  );
+  let content = std::fs::read_to_string(&default_log).expect("read execution log");
+  let log: serde_json::Value = serde_json::from_str(&content).expect("parse execution log JSON");
+  assert_eq!(log["final_status"], "success");
+}
+
+
+#[test]
+fn run_dot_execution_log_env_true_uses_default_path() {
+  let dir = tempfile::tempdir().expect("temp dir");
+  let stage = dir.path().join("stage");
+  std::fs::create_dir_all(&stage).expect("create stage dir");
+  let path = dir.path().join("minimal.dot");
+  std::fs::write(
+    &path,
+    r#"digraph G {
+  graph [goal="test"]
+  start [shape=Mdiamond]
+  exit [shape=Msquare]
+  start -> exit
+}"#,
+  )
+  .expect("write dot");
+
+  let path_str = path.to_str().expect("path");
+  let stage_str = stage.to_str().expect("stage");
+  let out = run_run_dot_with_env(
+    &["--stage-dir", stage_str, path_str],
+    &[("ATTRACTOR_EXECUTION_LOG", "true")],
+  );
+  assert!(
+    out.status.success(),
+    "stderr: {} stdout: {}",
+    String::from_utf8_lossy(&out.stderr),
+    String::from_utf8_lossy(&out.stdout)
+  );
+  let default_log = stage.join("execution.log.json");
+  assert!(
+    default_log.exists(),
+    "ATTRACTOR_EXECUTION_LOG=true should write to <stage_dir>/execution.log.json"
+  );
+}
+
+
+#[test]
+fn run_dot_execution_log_env_path_uses_that_path() {
+  let dir = tempfile::tempdir().expect("temp dir");
+  let path = dir.path().join("minimal.dot");
+  let log_path = dir.path().join("env_log.json");
+  std::fs::write(
+    &path,
+    r#"digraph G {
+  graph [goal="test"]
+  start [shape=Mdiamond]
+  exit [shape=Msquare]
+  start -> exit
+}"#,
+  )
+  .expect("write dot");
+
+  let path_str = path.to_str().expect("path");
+  let log_path_str = log_path.to_str().expect("log path");
+  let out = run_run_dot_with_env(&[path_str], &[("ATTRACTOR_EXECUTION_LOG", log_path_str)]);
+  assert!(
+    out.status.success(),
+    "stderr: {} stdout: {}",
+    String::from_utf8_lossy(&out.stderr),
+    String::from_utf8_lossy(&out.stdout)
+  );
+  assert!(
+    log_path.exists(),
+    "ATTRACTOR_EXECUTION_LOG=<path> should write to that path"
+  );
+  let content = std::fs::read_to_string(&log_path).expect("read execution log");
+  let log: serde_json::Value = serde_json::from_str(&content).expect("parse execution log JSON");
+  assert_eq!(log["final_status"], "success");
+}
+
+
+#[test]
+fn run_dot_execution_log_cli_overrides_env() {
+  let dir = tempfile::tempdir().expect("temp dir");
+  let path = dir.path().join("minimal.dot");
+  let cli_log = dir.path().join("cli_log.json");
+  let env_log = dir.path().join("env_log.json");
+  std::fs::write(
+    &path,
+    r#"digraph G {
+  graph [goal="test"]
+  start [shape=Mdiamond]
+  exit [shape=Msquare]
+  start -> exit
+}"#,
+  )
+  .expect("write dot");
+
+  let path_str = path.to_str().expect("path");
+  let cli_log_str = cli_log.to_str().expect("cli log path");
+  let env_log_str = env_log.to_str().expect("env log path");
+  let out = run_run_dot_with_env(
+    &["--execution-log", cli_log_str, path_str],
+    &[("ATTRACTOR_EXECUTION_LOG", env_log_str)],
+  );
+  assert!(
+    out.status.success(),
+    "stderr: {} stdout: {}",
+    String::from_utf8_lossy(&out.stderr),
+    String::from_utf8_lossy(&out.stdout)
+  );
+  assert!(cli_log.exists(), "CLI --execution-log path should be used");
+  assert!(
+    !env_log.exists(),
+    "env path should be ignored when --execution-log is set"
+  );
+}
+
+
 /// When execution_log_path is set, runner writes execution.log.json on completion (success path).
 #[tokio::test]
 async fn execution_log_path_writes_execution_log_json() {
@@ -165,6 +327,7 @@ async fn execution_log_path_writes_execution_log_json() {
   let steps = log["steps"].as_array().unwrap();
   assert!(!steps.is_empty(), "expected at least one step");
 }
+
 
 /// Runs a pre-push-shaped workflow (same topology as pre-push.dot) with quick exec commands
 /// so the test finishes in reasonable time. Verifies run_compiled_graph end-to-end.
@@ -204,6 +367,7 @@ async fn pre_push_dot_via_run_compiled_graph() {
     "expected context or outcome notes"
   );
 }
+
 
 /// Test out/error port wiring: exec that fails sends to error port → fix node → exit.
 #[tokio::test]
@@ -247,6 +411,7 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
   );
 }
 
+
 /// Run pipeline with run_dir and verify checkpoint is written.
 #[tokio::test]
 async fn run_dir_writes_checkpoint() {
@@ -286,6 +451,7 @@ async fn run_dir_writes_checkpoint() {
   );
   assert!(!cp.completed_nodes.is_empty() || !cp.current_node_id.is_empty());
 }
+
 
 // --- TDD: one-shot sender must be dropped so stream closes and graph completes ---
 //
@@ -344,6 +510,7 @@ async fn tdd_codergen_error_path_graph_completes_within_timeout() {
   );
 }
 
+
 /// CodergenNode success path: agent_cmd that succeeds → node sends on out port.
 /// Downstream must see stream close; requires CodergenNode to drop out_tx after send.
 #[tokio::test]
@@ -386,6 +553,7 @@ async fn tdd_codergen_success_path_graph_completes_within_timeout() {
   );
 }
 
+
 /// ExecNode error path: command fails → node sends on error port.
 /// Same assumption: sender for the used port must be dropped so graph completes.
 #[tokio::test]
@@ -423,6 +591,50 @@ async fn tdd_exec_error_path_graph_completes_within_timeout() {
   );
 }
 
+/// Cyclic graph with Merge: start and loop_back feed merge → check_ready (exec) → middle → loop_back.
+/// When check_ready fails, it sends on error port and must break to avoid deadlock with MergeNode
+/// (Merge waits for both inputs to close; loop_back never closes if we hang).
+#[tokio::test]
+async fn tdd_cyclic_exec_error_path_graph_completes_within_timeout() {
+  let dot = r#"
+    digraph TddCyclicExecError {
+      graph [goal="tdd cyclic exec error path"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      check [type=exec, command="false", label="Check"]
+      middle [type=exec, command="true", label="Middle"]
+      loop_back [type=exec, command="true", label="LoopBack"]
+      start -> check
+      loop_back -> check
+      check -> exit [condition="outcome=fail"]
+      check -> middle [condition="outcome=success"]
+      middle -> loop_back
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let result = tokio::time::timeout(
+    GRAPH_COMPLETION_TIMEOUT,
+    streamweave_attractor::run_compiled_graph(
+      &ast,
+      streamweave_attractor::RunOptions {
+        run_dir: None,
+        agent_cmd: None,
+        stage_dir: None,
+        execution_log_path: None,
+      },
+    ),
+  )
+  .await;
+  assert!(
+    result.is_ok(),
+    "cyclic graph must complete within {:?} (exec error path). \
+     If this times out, ExecNode did not break after error send, causing MergeNode deadlock.",
+    GRAPH_COMPLETION_TIMEOUT
+  );
+}
+
+
+
 /// ExecNode success path: command succeeds → node sends on out port.
 #[tokio::test]
 async fn tdd_exec_success_path_graph_completes_within_timeout() {
@@ -457,3 +669,44 @@ async fn tdd_exec_success_path_graph_completes_within_timeout() {
     GRAPH_COMPLETION_TIMEOUT
   );
 }
+
+/// Cyclic graph with Merge: start and loop_back feed merge → check (CodergenNode) → middle → loop_back.
+/// When check fails (no agent_cmd), it sends on error port and must break to avoid deadlock.
+#[tokio::test]
+async fn tdd_cyclic_codergen_error_path_graph_completes_within_timeout() {
+  let dot = r#"
+    digraph TddCyclicCodergenError {
+      graph [goal="tdd cyclic codergen error path"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      check [label="Check"]
+      middle [type=exec, command="true", label="Middle"]
+      loop_back [type=exec, command="true", label="LoopBack"]
+      start -> check
+      loop_back -> check
+      check -> exit [condition="outcome=fail"]
+      check -> middle [condition="outcome=success"]
+      middle -> loop_back
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let result = tokio::time::timeout(
+    GRAPH_COMPLETION_TIMEOUT,
+    streamweave_attractor::run_compiled_graph(
+      &ast,
+      streamweave_attractor::RunOptions {
+        run_dir: None,
+        agent_cmd: None,
+        stage_dir: None,
+        execution_log_path: None,
+      },
+    ),
+  )
+  .await;
+  assert!(
+    result.is_ok(),
+    "cyclic graph must complete within {:?} (codergen error path).      If this times out, CodergenNode did not break after error send.",
+    GRAPH_COMPLETION_TIMEOUT
+  );
+}
+

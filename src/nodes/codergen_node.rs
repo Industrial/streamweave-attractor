@@ -135,6 +135,7 @@ impl Node for CodergenNode {
             tracing::trace!(node = %name, "CodergenNode sending to error port");
             tracing::info!(node = %name, "finished: error");
             let _ = err_tx.send(arc).await;
+            break; // Exit path: break cycle to avoid deadlock with MergeNode
           }
         }
         drop(out_tx);
