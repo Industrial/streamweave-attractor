@@ -165,12 +165,14 @@ pub async fn run_compiled_graph(
           &result.completed_nodes,
           steps,
         )?;
+        // Sync path: execution log is the only persisted state; no checkpoint.json.
         return Ok(result);
       }
       RunLoopResult::Err(e) => {
         let steps = state.step_log.unwrap_or_default();
         let completed = state.completed_nodes.clone();
         write_execution_log(log_path, &goal, &started_at, "error", &completed, steps)?;
+        // Sync path: execution log is the only persisted state; no checkpoint.json.
         return Err(e);
       }
     }
