@@ -1,37 +1,32 @@
 digraph BeadsWorkerLoop {
   graph [
     goal="Drain ready beads tasks one by one; do not commit .beads/issues.jsonl",
-    label="Beads worker loop (claim → implement → commit → close → repeat)"
+    label="Beads worker loop (pick/claim → implement → commit → close → repeat)"
   ]
   rankdir=LR
 
   start [shape=Mdiamond, label="Start"]
   exit [shape=Msquare, label="Exit"]
 
-  check_ready [
+  pick_task [
     shape=box,
-    label="Check ready",
-    type=exec,
-    command="devenv shell -- sh -c 'bd ready --json | jq -ce \"if length == 0 then halt_error(1) else {context_updates: {ready_task_id: .[0].id}} end\" > \"${ATTRACTOR_STAGE_DIR:-.attractor}/outcome.json\"'"
+    label="Pick task (AI)",
+    prompt="You are the beads-worker. Ensure exactly one task is in progress and set context key ready_task_id to that task id. Use devenv shell for all bd commands.\n\n1. List in-progress: devenv shell -- bd list --status=in_progress --json\n2. If multiple in-progress: choose one to keep; for each of the others run: devenv shell -- bd update <id> --status open --json. Set ready_task_id to the id you kept. Exit 0.\n3. If exactly one in-progress: set ready_task_id to that id. Exit 0.\n4. If zero in-progress: run devenv shell -- bd ready --json. If the list is empty, exit 1 (no work). Otherwise pick the first task, run: devenv shell -- bd update <id> --status in_progress --claim --json, set ready_task_id to that id. Exit 0.\n\nWrite outcome (success/fail) and context_updates (ready_task_id) to the stage outcome so the pipeline can continue. Exit 0 when a task is picked; exit 1 when there is no task to do."
   ]
-
-  status_in_progress [shape=box, label="Claim task", prompt="Claim the task whose id is in context key ready_task_id. Run: devenv shell -- bd update $ready_task_id --status in_progress --claim --json. Exit 0."]
 
   implement [shape=box, label="Implement", prompt="You are the beads-worker (see .cursor/agents/beads-worker.md). Implement the claimed task. Follow project rules: Effect.ts, devenv shell, no todo_write. Run tests/linters for changed code. Do not run bd close or git commit yet. Exit 0 when done."]
 
   git_commit [shape=box, label="Git commit", prompt="Commit code and config changes with a conventional commit message. Do NOT stage or commit .beads/issues.jsonl; exclude it from the commit. Use: devenv shell -- git add (files other than .beads/issues.jsonl), then git commit -m \"<message>\". Exit 0."]
 
-  status_done [shape=box, label="Close task", prompt="Close the task: run devenv shell -- bd close $ready_task_id --reason \"Done\" --json. Exit 0. The pipeline will then return to Check ready."]
+  status_done [shape=box, label="Close task", prompt="Close the task: run devenv shell -- bd close $ready_task_id --reason \"Done\" --json. Exit 0. The pipeline will then return to Pick task."]
 
-  start -> check_ready
-  check_ready -> status_in_progress [label="has_tasks", condition="outcome=success"]
-  check_ready -> exit [label="no_tasks", condition="outcome=fail"]
-  status_in_progress -> implement [label="success", condition="outcome=success"]
-  status_in_progress -> exit [label="failure", condition="outcome=fail"]
+  start -> pick_task
+  pick_task -> implement [label="has_tasks", condition="outcome=success"]
+  pick_task -> exit [label="no_tasks", condition="outcome=fail"]
   implement -> git_commit [label="success", condition="outcome=success"]
   implement -> exit [label="failure", condition="outcome=fail"]
   git_commit -> status_done [label="success", condition="outcome=success"]
   git_commit -> exit [label="failure", condition="outcome=fail"]
-  status_done -> check_ready [label="success", condition="outcome=success"]
+  status_done -> pick_task [label="success", condition="outcome=success"]
   status_done -> exit [label="failure", condition="outcome=fail"]
 }
