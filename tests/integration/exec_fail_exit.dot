@@ -1,0 +1,9 @@
+digraph ExecFailExit {
+  graph [goal="Exec that fails, then exit (pipeline reports failure)"]
+  start [shape=Mdiamond]
+  exit [shape=Msquare]
+  fail_step [type=exec, command="false"]
+  start -> fail_step
+  fail_step -> exit [condition="outcome=fail"]
+  fail_step -> exit [condition="outcome=success"]
+}

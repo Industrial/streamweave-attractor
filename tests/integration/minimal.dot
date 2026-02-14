@@ -1,0 +1,6 @@
+digraph G {
+  graph [goal="minimal"]
+  start [shape=Mdiamond]
+  exit [shape=Msquare]
+  start -> exit
+}

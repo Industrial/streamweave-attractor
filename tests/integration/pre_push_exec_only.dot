@@ -1,0 +1,19 @@
+digraph PrePushExecOnly {
+  graph [goal="Pre-push topology with exec-only (true) for fast tests"]
+  rankdir=LR
+  start [shape=Mdiamond]
+  exit [shape=Msquare]
+  pre_push [type=exec, command="true"]
+  test_coverage [type=exec, command="true"]
+  fix_pre_push [label="Fix", type=exec, command="true"]
+  fix_test_coverage [label="Fix", type=exec, command="true"]
+  start -> pre_push
+  pre_push -> test_coverage [condition="outcome=success"]
+  pre_push -> fix_pre_push [condition="outcome=fail"]
+  fix_pre_push -> pre_push [condition="outcome=success"]
+  fix_pre_push -> exit [condition="outcome=fail"]
+  test_coverage -> exit [condition="outcome=success"]
+  test_coverage -> fix_test_coverage [condition="outcome=fail"]
+  fix_test_coverage -> test_coverage [condition="outcome=success"]
+  fix_test_coverage -> exit [condition="outcome=fail"]
+}

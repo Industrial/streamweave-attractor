@@ -1,0 +1,10 @@
+digraph TestSuccessOnly {
+  graph [goal="Test success path only (out port)", label="start → ok → exit"]
+  rankdir=LR
+  start [shape=Mdiamond, label="Start"]
+  exit [shape=Msquare, label="Exit"]
+  ok [shape=box, type=exec, label="Succeed", command="true"]
+  start -> ok
+  ok -> exit [label="success", condition="outcome=success"]
+  ok -> exit [label="failure", condition="outcome=fail"]
+}

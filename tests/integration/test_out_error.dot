@@ -1,0 +1,39 @@
+digraph TestOutError {
+  graph [
+    goal="Test out/error port wiring: success path, error path, and fix-to-exit",
+    label="start → ok (true) → fail_step (false) → fix (true) → exit"
+  ]
+  rankdir=LR
+
+  start [shape=Mdiamond, label="Start"]
+  exit [shape=Msquare, label="Exit"]
+
+  ok [
+    shape=box,
+    type=exec,
+    label="Always succeed",
+    command="true"
+  ]
+
+  fail_step [
+    shape=box,
+    type=exec,
+    label="Always fail (tests error port)",
+    command="false"
+  ]
+
+  fix [
+    shape=box,
+    type=exec,
+    label="Fix step (succeed then exit)",
+    command="true"
+  ]
+
+  start -> ok
+  ok -> fail_step [label="success", condition="outcome=success"]
+  ok -> exit [label="failure", condition="outcome=fail"]
+  fail_step -> exit [label="success", condition="outcome=success"]
+  fail_step -> fix [label="failure", condition="outcome=fail"]
+  fix -> exit [label="success", condition="outcome=success"]
+  fix -> exit [label="failure", condition="outcome=fail"]
+}
