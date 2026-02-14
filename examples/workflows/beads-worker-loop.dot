@@ -11,7 +11,8 @@ digraph BeadsWorkerLoop {
   check_ready [
     shape=box,
     label="Check ready",
-    prompt="Run: devenv shell -- bd ready --json. Parse the output. If there is at least one ready task, write a JSON file to $ATTRACTOR_STAGE_DIR/outcome.json with: {\"context_updates\": {\"has_tasks\": \"true\", \"ready_task_id\": \"<id>\"}} where <id> is the first task's id (e.g. monorepo-123 or bd-123). If there are no ready tasks, write outcome.json with: {\"context_updates\": {\"has_tasks\": \"false\"}}. Then exit 0."
+    type=exec,
+    command="devenv shell -- sh -c 'bd ready --json | jq -ce \"if length == 0 then halt_error(1) else {context_updates: {ready_task_id: .[0].id}} end\" > \"${ATTRACTOR_STAGE_DIR:-.attractor}/outcome.json\"'"
   ]
 
   status_in_progress [shape=box, label="Claim task", prompt="Claim the task whose id is in context key ready_task_id. Run: devenv shell -- bd update $ready_task_id --status in_progress --claim --json. Exit 0."]
