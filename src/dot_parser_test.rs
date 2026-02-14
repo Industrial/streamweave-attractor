@@ -334,13 +334,17 @@ fn parse_pre_push_dot_all_nodes() {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/workflows/pre-push.dot");
   let dot = std::fs::read_to_string(&path).unwrap();
   let ast = parse_dot(&dot).unwrap();
-  assert_eq!(ast.nodes.len(), 6, "expected 6 nodes in pre-push.dot");
+  assert_eq!(ast.nodes.len(), 10, "expected 10 nodes in pre-push.dot");
   assert!(ast.find_start().is_some(), "expected start node");
   assert!(ast.find_exit().is_some(), "expected exit node");
   assert!(ast.nodes.contains_key("start"));
   assert!(ast.nodes.contains_key("exit"));
   assert!(ast.nodes.contains_key("pre_push"));
+  assert!(ast.nodes.contains_key("pre_push_git_commit"));
   assert!(ast.nodes.contains_key("test_coverage"));
+  assert!(ast.nodes.contains_key("test_coverage_git_commit"));
   assert!(ast.nodes.contains_key("fix_pre_push"));
+  assert!(ast.nodes.contains_key("fix_pre_push_git_commit"));
   assert!(ast.nodes.contains_key("fix_test_coverage"));
+  assert!(ast.nodes.contains_key("fix_test_coverage_git_commit"));
 }

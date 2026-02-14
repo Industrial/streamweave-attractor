@@ -1,7 +1,7 @@
 digraph PrePush {
   graph [
     goal="Run pre-push quality gates for Rust project; fix-and-retry until success",
-    label="Pre-push (Rust): bin/pre-push ⟲ fix → bin/test-coverage ⟲ fix"
+    label="Pre-push (Rust): bin/pre-push → git commit → bin/test-coverage → git commit ⟲ fix"
   ]
   rankdir=LR
 
@@ -15,6 +15,13 @@ digraph PrePush {
     command="devenv shell -- bin/pre-push"
   ]
 
+  pre_push_git_commit [
+    shape=box,
+    type=exec,
+    label="Git commit",
+    command="devenv shell -- sh -c 'git add -A && (git diff --cached --quiet || git commit -m \"chore: pre-push passed\")'"
+  ]
+
   test_coverage [
     shape=box,
     type=exec,
@@ -22,10 +29,29 @@ digraph PrePush {
     command="devenv shell -- bin/test-coverage"
   ]
 
+  test_coverage_git_commit [
+    shape=box,
+    type=exec,
+    label="Git commit (after test-coverage)",
+    command="devenv shell -- sh -c 'git add -A && (git diff --cached --quiet || git commit -m \"chore: test-coverage passed\")'"
+  ]
+
   fix_pre_push [
     shape=box,
     label="Fix (pre-push)",
     prompt="bin/pre-push failed (format, lint, check, build, test, etc.). From the output or logs, identify failures. Create small bd tasks: devenv shell -- bd create \"...\" -t task -p 1 --json. Act as beads-worker: bd ready, claim one task, fix it, bd close, commit. Do NOT commit .beads/issues.jsonl. Exit 0; pipeline returns to bin/pre-push."
+  ]
+
+  fix_pre_push_git_commit [
+    shape=box,
+    label="Fix (git commit)",
+    prompt="Git commit failed (e.g. hooks, empty commit). Fix the issue (adjust message, fix hooks, or resolve conflicts). Do NOT commit .beads/issues.jsonl. Exit 0; pipeline returns to pre_push_git_commit."
+  ]
+
+  fix_test_coverage_git_commit [
+    shape=box,
+    label="Fix (git commit after test-coverage)",
+    prompt="Git commit failed after test-coverage (e.g. hooks, empty commit). Fix the issue. Do NOT commit .beads/issues.jsonl. Exit 0; pipeline returns to test_coverage_git_commit."
   ]
 
   fix_test_coverage [
@@ -35,12 +61,20 @@ digraph PrePush {
   ]
 
   start -> pre_push
-  pre_push -> test_coverage [label="success", condition="outcome=success"]
+  pre_push -> pre_push_git_commit [label="success", condition="outcome=success"]
   pre_push -> fix_pre_push [label="failure", condition="outcome=fail"]
   fix_pre_push -> pre_push [label="success", condition="outcome=success"]
   fix_pre_push -> exit [label="failure", condition="outcome=fail"]
-  test_coverage -> exit [label="success", condition="outcome=success"]
+  pre_push_git_commit -> test_coverage [label="success", condition="outcome=success"]
+  pre_push_git_commit -> fix_pre_push_git_commit [label="failure", condition="outcome=fail"]
+  fix_pre_push_git_commit -> pre_push_git_commit [label="success", condition="outcome=success"]
+  fix_pre_push_git_commit -> exit [label="failure", condition="outcome=fail"]
+  test_coverage -> test_coverage_git_commit [label="success", condition="outcome=success"]
   test_coverage -> fix_test_coverage [label="failure", condition="outcome=fail"]
+  test_coverage_git_commit -> exit [label="success", condition="outcome=success"]
+  test_coverage_git_commit -> fix_test_coverage_git_commit [label="failure", condition="outcome=fail"]
+  fix_test_coverage_git_commit -> test_coverage_git_commit [label="success", condition="outcome=success"]
+  fix_test_coverage_git_commit -> exit [label="failure", condition="outcome=fail"]
   fix_test_coverage -> test_coverage [label="success", condition="outcome=success"]
   fix_test_coverage -> exit [label="failure", condition="outcome=fail"]
 }
