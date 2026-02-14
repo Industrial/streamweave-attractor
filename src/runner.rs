@@ -101,6 +101,7 @@ pub async fn run_compiled_graph(
   options: RunOptions<'_>,
 ) -> Result<AttractorResult, String> {
   // When execution_log_path is set, load log at start; it is the single source of truth for already_completed and resume.
+  // Sync path: we do not write checkpoint.json; execution log is the only persisted state.
   if let Some(ref log_path) = options.execution_log_path {
     let exit_id = ast
       .find_exit()
