@@ -2,13 +2,13 @@
 
 use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use super::OutcomeStatus;
 
 /// Result of executing a single Attractor pipeline node.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeOutcome {
   pub status: OutcomeStatus,
   pub notes: Option<String>,

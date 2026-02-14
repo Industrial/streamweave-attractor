@@ -3,12 +3,12 @@
 //! Maps from [RunContext](super::RunContext) and [NodeOutcome](super::NodeOutcome) produced
 //! during the run.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::{NodeOutcome, RunContext};
 
 /// One recorded step in the execution log.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionStepEntry {
   /// 1-based step index.
   pub step: u32,
@@ -55,7 +55,7 @@ impl ExecutionStepEntry {
 }
 
 /// Root structure for execution.log.json.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionLog {
   /// Log format version.
   pub version: u32,

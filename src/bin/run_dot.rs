@@ -6,8 +6,8 @@
 //! Usage: `run_dot [OPTIONS] <path-to-dot-file>`
 //! Example: run_dot examples/workflows/pre-push.dot
 //!
-//! With --run-dir DIR, checkpoint is written to DIR/checkpoint.json on successful exit.
-//! With --resume DIR, run resumes from DIR/checkpoint.json (same .dot file). Checkpoint is saved only at exit (no mid-run crash recovery).
+//! With --run-dir DIR, checkpoint is written to DIR/checkpoint.json on successful exit (when not using --execution-log).
+//! With --resume DIR, run resumes from DIR/execution.log.json when present, else DIR/checkpoint.json (same .dot file).
 //!
 //! Set RUST_LOG=streamweave_attractor=trace for TRACE-level span enter/exit and events.
 
@@ -17,7 +17,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process;
 use streamweave_attractor::{
-  DEFAULT_STAGE_DIR, RunOptions, checkpoint_io, dot_parser, run_compiled_graph,
+  DEFAULT_STAGE_DIR, RunOptions, checkpoint_io, dot_parser, execution_log_io, run_compiled_graph,
 };
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
@@ -35,9 +35,9 @@ use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
   ATTRACTOR_EXECUTION_LOG  Unset=off. 1 or true=write execution log to <stage_dir>/execution.log.json.
                            Any other value=path to execution log file. Overridden by --execution-log.
 
-Checkpoint (saved only at successful exit):
-  --run-dir DIR   Write checkpoint to DIR/checkpoint.json on success.
-  --resume DIR    Resume from DIR/checkpoint.json (load checkpoint, run same .dot from saved state).
+Run state (resume prefers execution log):
+  --run-dir DIR   Write checkpoint to DIR/checkpoint.json on success (unless --execution-log is set).
+  --resume DIR    Resume from DIR/execution.log.json if present, else DIR/checkpoint.json (same .dot file).
 
 Examples:
   run_dot examples/workflows/pre-push.dot
@@ -98,17 +98,6 @@ async fn main() {
     .unwrap_or_else(|| PathBuf::from(DEFAULT_STAGE_DIR));
   let run_dir_for_options = Some(run_dir.as_path());
 
-  let resume_checkpoint = args.resume.as_ref().map(|dir| {
-    let path = dir.join(checkpoint_io::CHECKPOINT_FILENAME);
-    match checkpoint_io::load_checkpoint(&path) {
-      Ok(cp) => cp,
-      Err(e) => {
-        eprintln!("Error loading checkpoint from {}: {}", path.display(), e);
-        process::exit(1);
-      }
-    }
-  });
-
   let default_execution_log_path = stage_dir.join("execution.log.json");
   let execution_log_from_env = env::var("ATTRACTOR_EXECUTION_LOG").ok().map(|v| {
     let v = v.trim();
@@ -141,6 +130,26 @@ async fn main() {
       process::exit(1);
     }
   };
+
+  let resume_checkpoint = args.resume.as_ref().and_then(|dir| {
+    let log_path = dir.join(execution_log_io::EXECUTION_LOG_FILENAME);
+    if log_path.exists() {
+      if let Ok(log) = execution_log_io::load_execution_log(&log_path) {
+        let exit_id = ast.find_exit().map(|n| n.id.as_str());
+        if let Some(r) = execution_log_io::resume_state_from_log(&log, exit_id) {
+          return Some(r.checkpoint);
+        }
+      }
+    }
+    let cp_path = dir.join(checkpoint_io::CHECKPOINT_FILENAME);
+    match checkpoint_io::load_checkpoint(&cp_path) {
+      Ok(cp) => Some(cp),
+      Err(e) => {
+        eprintln!("Error loading checkpoint from {}: {}", cp_path.display(), e);
+        process::exit(1);
+      }
+    }
+  });
 
   let options = RunOptions {
     run_dir: run_dir_for_options,

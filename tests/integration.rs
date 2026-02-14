@@ -249,14 +249,21 @@ async fn integration_lib_two_runs_without_resume_both_run_fully() {
       execution_log_path: Some(log_path.clone()),
     },
   )
-    .await
-    .expect("first run");
+  .await
+  .expect("first run");
   assert!(format!("{:?}", r1.last_outcome.status) == "Success");
   assert!(r1.completed_nodes.contains(&"pre_push".to_string()));
   assert!(r1.completed_nodes.contains(&"test_coverage".to_string()));
 
+  assert!(
+    log_path.exists(),
+    "first run must leave execution log when execution_log_path is set"
+  );
   let checkpoint_file = run_path.join(streamweave_attractor::checkpoint_io::CHECKPOINT_FILENAME);
-  assert!(checkpoint_file.exists(), "first run must leave a checkpoint when run_dir is set");
+  assert!(
+    !checkpoint_file.exists(),
+    "when execution_log_path is set, checkpoint is not written (log is single source)"
+  );
 
   let r2 = streamweave_attractor::run_compiled_graph(
     &ast,
@@ -268,10 +275,13 @@ async fn integration_lib_two_runs_without_resume_both_run_fully() {
       execution_log_path: Some(log_path.clone()),
     },
   )
-    .await
-    .expect("second run");
+  .await
+  .expect("second run");
   assert!(format!("{:?}", r2.last_outcome.status) == "Success");
   assert!(r2.completed_nodes.contains(&"pre_push".to_string()));
   assert!(r2.completed_nodes.contains(&"test_coverage".to_string()));
-  assert_eq!(r1.completed_nodes, r2.completed_nodes, "second run must execute the full graph, not resume from checkpoint");
+  assert_eq!(
+    r1.completed_nodes, r2.completed_nodes,
+    "second run must execute the full graph, not resume from checkpoint"
+  );
 }

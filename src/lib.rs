@@ -15,6 +15,7 @@
 pub const DEFAULT_STAGE_DIR: &str = ".attractor";
 pub(crate) mod agent_run;
 pub mod checkpoint_io;
+pub mod execution_log_io;
 
 #[cfg(test)]
 mod checkpoint_io_test;

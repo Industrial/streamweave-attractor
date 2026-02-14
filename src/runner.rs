@@ -128,15 +128,6 @@ pub async fn run_compiled_graph(
           &result.completed_nodes,
           steps,
         )?;
-        if let Some(run_dir) = options.run_dir {
-          let cp = Checkpoint {
-            context: result.context.clone(),
-            current_node_id: result.completed_nodes.last().cloned().unwrap_or_default(),
-            completed_nodes: result.completed_nodes.clone(),
-          };
-          let path = run_dir.join(CHECKPOINT_FILENAME);
-          checkpoint_io::save_checkpoint(&path, &cp).map_err(|e| e.to_string())?;
-        }
         return Ok(result);
       }
       RunLoopResult::Err(e) => {
