@@ -38,6 +38,7 @@ pub(crate) fn apply_context_updates(context: &mut HashMap<String, String>, outco
 }
 
 /// Result of running the execution loop on one state.
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum RunLoopResult {
   /// Pipeline completed successfully.
   Ok(AttractorResult),
@@ -112,10 +113,8 @@ pub(crate) fn run_execution_loop_once(
       ));
     }
 
-    if let Some(cb) = &mut after_step {
-      if let Err(e) = cb(state) {
-        return RunLoopResult::Err(e);
-      }
+    if let Some(cb) = &mut after_step && let Err(e) = cb(state) {
+      return RunLoopResult::Err(e);
     }
 
     match sel_out.next_node_id {
