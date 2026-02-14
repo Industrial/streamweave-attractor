@@ -19,7 +19,6 @@ fn run_run_dot_with_env(args: &[&str], env_add: &[(&str, &str)]) -> std::process
   cmd.output().expect("run cargo run --bin run_dot")
 }
 
-
 #[test]
 fn run_dot_prints_usage_without_args() {
   let out = run_run_dot(&[]);
@@ -28,7 +27,6 @@ fn run_dot_prints_usage_without_args() {
   assert!(stderr.contains("Usage") || stderr.contains("usage"));
   assert!(stderr.contains("run_dot") || stderr.contains(".dot"));
 }
-
 
 #[test]
 fn run_dot_exits_1_for_missing_file() {
@@ -41,7 +39,6 @@ fn run_dot_exits_1_for_missing_file() {
     stderr
   );
 }
-
 
 #[test]
 fn run_dot_succeeds_with_minimal_start_exit_dot() {
@@ -70,7 +67,6 @@ fn run_dot_succeeds_with_minimal_start_exit_dot() {
   assert!(stdout.contains("Pipeline completed"));
   assert!(stdout.contains("Success") || stdout.contains("completed"));
 }
-
 
 #[test]
 fn run_dot_execution_log_cli_writes_log_file() {
@@ -104,7 +100,6 @@ fn run_dot_execution_log_cli_writes_log_file() {
   assert_eq!(log["goal"], "test");
   assert_eq!(log["final_status"], "success");
 }
-
 
 #[test]
 fn run_dot_execution_log_cli_default_path_under_stage_dir() {
@@ -141,7 +136,6 @@ fn run_dot_execution_log_cli_default_path_under_stage_dir() {
   let log: serde_json::Value = serde_json::from_str(&content).expect("parse execution log JSON");
   assert_eq!(log["final_status"], "success");
 }
-
 
 #[test]
 fn run_dot_execution_log_env_1_uses_default_path() {
@@ -182,7 +176,6 @@ fn run_dot_execution_log_env_1_uses_default_path() {
   assert_eq!(log["final_status"], "success");
 }
 
-
 #[test]
 fn run_dot_execution_log_env_true_uses_default_path() {
   let dir = tempfile::tempdir().expect("temp dir");
@@ -219,7 +212,6 @@ fn run_dot_execution_log_env_true_uses_default_path() {
   );
 }
 
-
 #[test]
 fn run_dot_execution_log_env_path_uses_that_path() {
   let dir = tempfile::tempdir().expect("temp dir");
@@ -253,7 +245,6 @@ fn run_dot_execution_log_env_path_uses_that_path() {
   let log: serde_json::Value = serde_json::from_str(&content).expect("parse execution log JSON");
   assert_eq!(log["final_status"], "success");
 }
-
 
 #[test]
 fn run_dot_execution_log_cli_overrides_env() {
@@ -292,7 +283,6 @@ fn run_dot_execution_log_cli_overrides_env() {
   );
 }
 
-
 /// When execution_log_path is set, runner writes execution.log.json on completion (success path).
 #[tokio::test]
 async fn execution_log_path_writes_execution_log_json() {
@@ -327,7 +317,6 @@ async fn execution_log_path_writes_execution_log_json() {
   let steps = log["steps"].as_array().unwrap();
   assert!(!steps.is_empty(), "expected at least one step");
 }
-
 
 /// Runs a pre-push-shaped workflow (same topology as pre-push.dot) with quick exec commands
 /// so the test finishes in reasonable time. Verifies run_compiled_graph end-to-end.
@@ -367,7 +356,6 @@ async fn pre_push_dot_via_run_compiled_graph() {
     "expected context or outcome notes"
   );
 }
-
 
 /// Test out/error port wiring: exec that fails sends to error port → fix node → exit.
 #[tokio::test]
@@ -411,7 +399,6 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
   );
 }
 
-
 /// Run pipeline with run_dir and verify checkpoint is written.
 #[tokio::test]
 async fn run_dir_writes_checkpoint() {
@@ -451,7 +438,6 @@ async fn run_dir_writes_checkpoint() {
   );
   assert!(!cp.completed_nodes.is_empty() || !cp.current_node_id.is_empty());
 }
-
 
 // --- TDD: one-shot sender must be dropped so stream closes and graph completes ---
 //
@@ -510,7 +496,6 @@ async fn tdd_codergen_error_path_graph_completes_within_timeout() {
   );
 }
 
-
 /// CodergenNode success path: agent_cmd that succeeds → node sends on out port.
 /// Downstream must see stream close; requires CodergenNode to drop out_tx after send.
 #[tokio::test]
@@ -552,7 +537,6 @@ async fn tdd_codergen_success_path_graph_completes_within_timeout() {
     run_result.completed_nodes
   );
 }
-
 
 /// ExecNode error path: command fails → node sends on error port.
 /// Same assumption: sender for the used port must be dropped so graph completes.
@@ -633,8 +617,6 @@ async fn tdd_cyclic_exec_error_path_graph_completes_within_timeout() {
   );
 }
 
-
-
 /// ExecNode success path: command succeeds → node sends on out port.
 #[tokio::test]
 async fn tdd_exec_success_path_graph_completes_within_timeout() {
@@ -709,4 +691,3 @@ async fn tdd_cyclic_codergen_error_path_graph_completes_within_timeout() {
     GRAPH_COMPLETION_TIMEOUT
   );
 }
-
