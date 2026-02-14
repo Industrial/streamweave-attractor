@@ -6,7 +6,9 @@ use std::path::Path;
 use std::process::Command;
 
 fn integration_dir() -> std::path::PathBuf {
-  Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("integration")
+  Path::new(env!("CARGO_MANIFEST_DIR"))
+    .join("tests")
+    .join("integration")
 }
 
 fn dot_path(name: &str) -> std::path::PathBuf {
@@ -21,11 +23,7 @@ fn run_run_dot(args: &[&str]) -> (Vec<u8>, Vec<u8>, bool) {
     .current_dir(env!("CARGO_MANIFEST_DIR"))
     .output()
     .expect("cargo run --bin run_dot");
-  (
-    out.stdout,
-    out.stderr,
-    out.status.success(),
-  )
+  (out.stdout, out.stderr, out.status.success())
 }
 
 // ---- CLI tests using tests/integration/*.dot ----
@@ -35,7 +33,11 @@ fn integration_minimal_dot_succeeds() {
   let path = dot_path("minimal.dot");
   let path_str = path.to_str().expect("path");
   let (stdout, stderr, success) = run_run_dot(&[path_str]);
-  assert!(success, "minimal.dot should succeed: stderr={}", String::from_utf8_lossy(&stderr));
+  assert!(
+    success,
+    "minimal.dot should succeed: stderr={}",
+    String::from_utf8_lossy(&stderr)
+  );
   let out = String::from_utf8_lossy(&stdout);
   assert!(out.contains("Pipeline completed"));
   assert!(out.contains("Success"));
@@ -46,7 +48,11 @@ fn integration_test_success_only_dot_succeeds() {
   let path = dot_path("test_success_only.dot");
   let path_str = path.to_str().expect("path");
   let (stdout, stderr, success) = run_run_dot(&[path_str]);
-  assert!(success, "test_success_only.dot should succeed: stderr={}", String::from_utf8_lossy(&stderr));
+  assert!(
+    success,
+    "test_success_only.dot should succeed: stderr={}",
+    String::from_utf8_lossy(&stderr)
+  );
   let out = String::from_utf8_lossy(&stdout);
   assert!(out.contains("Pipeline completed"));
   assert!(out.contains("Success"));
@@ -58,7 +64,11 @@ fn integration_test_out_error_dot_succeeds() {
   let path = dot_path("test_out_error.dot");
   let path_str = path.to_str().expect("path");
   let (stdout, stderr, success) = run_run_dot(&[path_str]);
-  assert!(success, "test_out_error.dot should succeed: stderr={}", String::from_utf8_lossy(&stderr));
+  assert!(
+    success,
+    "test_out_error.dot should succeed: stderr={}",
+    String::from_utf8_lossy(&stderr)
+  );
   let out = String::from_utf8_lossy(&stdout);
   assert!(out.contains("Pipeline completed"));
   assert!(out.contains("Success"));
@@ -70,7 +80,11 @@ fn integration_pre_push_exec_only_dot_succeeds() {
   let path = dot_path("pre_push_exec_only.dot");
   let path_str = path.to_str().expect("path");
   let (stdout, stderr, success) = run_run_dot(&[path_str]);
-  assert!(success, "pre_push_exec_only.dot should succeed: stderr={}", String::from_utf8_lossy(&stderr));
+  assert!(
+    success,
+    "pre_push_exec_only.dot should succeed: stderr={}",
+    String::from_utf8_lossy(&stderr)
+  );
   let out = String::from_utf8_lossy(&stdout);
   assert!(out.contains("Pipeline completed"));
   assert!(out.contains("Success"));
@@ -105,7 +119,11 @@ async fn integration_lib_minimal_succeeds() {
   .await
   .expect("run_compiled_graph");
   assert!(format!("{:?}", r.last_outcome.status) == "Success");
-  assert!(r.completed_nodes.iter().any(|n| n == "exit" || n == "start"));
+  assert!(
+    r.completed_nodes
+      .iter()
+      .any(|n| n == "exit" || n == "start")
+  );
 }
 
 #[tokio::test]
