@@ -714,8 +714,10 @@ async fn tdd_codergen_error_path_graph_completes_within_timeout() {
 
 /// CodergenNode success path: agent_cmd that succeeds → node sends on out port.
 /// Downstream must see stream close; requires CodergenNode to drop out_tx after send.
+/// Uses a temp stage_dir so no leftover outcome.json (e.g. "outcome":"fail") is read.
 #[tokio::test]
 async fn tdd_codergen_success_path_graph_completes_within_timeout() {
+  let stage_dir = tempfile::tempdir().expect("temp stage dir");
   let dot = r#"
     digraph TddCodergenSuccess {
       graph [goal="tdd codergen success path"]
@@ -736,7 +738,7 @@ async fn tdd_codergen_success_path_graph_completes_within_timeout() {
         resume_state: None,
         resume_already_completed: false,
         agent_cmd: Some("true".to_string()),
-        stage_dir: None,
+        stage_dir: Some(stage_dir.path().to_path_buf()),
         execution_log_path: None,
       },
     ),
