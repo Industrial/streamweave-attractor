@@ -36,10 +36,17 @@ pub async fn run_streamweave_graph(
 
   graph.execute().await.map_err(|e| e.to_string())?;
   let first = rx_out.recv().await;
-  graph
-    .wait_for_completion()
-    .await
-    .map_err(|e| e.to_string())?;
+  // When resuming at a node other than start, only that node receives input; the rest never
+  // get data and would block forever. Once we have the result, dropping the graph closes
+  // channels so node tasks can exit. If we got no result, still wait for completion.
+  if first.is_some() {
+    drop(graph);
+  } else {
+    graph
+      .wait_for_completion()
+      .await
+      .map_err(|e| e.to_string())?;
+  }
   Ok(first)
 }
 
@@ -103,10 +110,14 @@ pub async fn run_compiled_graph(
 
   graph.execute().await.map_err(|e| e.to_string())?;
   let first = rx_out.recv().await;
-  graph
-    .wait_for_completion()
-    .await
-    .map_err(|e| e.to_string())?;
+  if first.is_some() {
+    drop(graph);
+  } else {
+    graph
+      .wait_for_completion()
+      .await
+      .map_err(|e| e.to_string())?;
+  }
 
   let payload = first
     .and_then(|arc| arc.downcast::<GraphPayload>().ok())
