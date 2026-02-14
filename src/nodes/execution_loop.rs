@@ -113,7 +113,9 @@ pub(crate) fn run_execution_loop_once(
       ));
     }
 
-    if let Some(cb) = &mut after_step && let Err(e) = cb(state) {
+    if let Some(cb) = &mut after_step
+      && let Err(e) = cb(state)
+    {
       return RunLoopResult::Err(e);
     }
 

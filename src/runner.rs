@@ -3,8 +3,10 @@
 //! - [run_streamweave_graph]: run a compiled graph (one trigger in, first output out).
 //! - [run_compiled_graph]: compile AST then run, return [crate::nodes::execution_loop::AttractorResult].
 
+use crate::execution_log_io::{
+  load_execution_log, resume_state_from_log, write_execution_log_partial,
+};
 use crate::nodes::execution_loop::AttractorResult;
-use crate::execution_log_io::{load_execution_log, resume_state_from_log, write_execution_log_partial};
 use crate::nodes::execution_loop::{RunLoopResult, run_execution_loop_once};
 use crate::nodes::init_context::{create_initial_state, create_initial_state_from_resume_state};
 use crate::types::{AttractorGraph, ExecutionLog, GraphPayload, NodeOutcome, ResumeState};
@@ -98,22 +100,7 @@ pub async fn run_compiled_graph(
   ast: &AttractorGraph,
   options: RunOptions<'_>,
 ) -> Result<AttractorResult, String> {
-  if let Some(ref st) = options.resume_state {
-    let exit_id = ast
-      .find_exit()
-      .map(|n| n.id.clone())
-      .ok_or("missing exit node")?;
-    let at_exit = st.current_node_id == exit_id;
-    if options.resume_already_completed || (at_exit && options.execution_log_path.is_none()) {
-      return Ok(AttractorResult {
-        last_outcome: NodeOutcome::success("Exit"),
-        completed_nodes: st.completed_nodes.clone(),
-        context: st.context.clone(),
-        already_completed: true,
-      });
-    }
-  }
-
+  // When execution_log_path is set, load log at start; it is the single source of truth for already_completed and resume.
   if let Some(ref log_path) = options.execution_log_path {
     let exit_id = ast
       .find_exit()
@@ -186,6 +173,23 @@ pub async fn run_compiled_graph(
         write_execution_log(log_path, &goal, &started_at, "error", &completed, steps)?;
         return Err(e);
       }
+    }
+  }
+
+  // When execution_log_path is not set, optional early return from explicit resume_state.
+  if let Some(ref st) = options.resume_state {
+    let exit_id = ast
+      .find_exit()
+      .map(|n| n.id.clone())
+      .ok_or("missing exit node")?;
+    let at_exit = st.current_node_id == exit_id;
+    if options.resume_already_completed || at_exit {
+      return Ok(AttractorResult {
+        last_outcome: NodeOutcome::success("Exit"),
+        completed_nodes: st.completed_nodes.clone(),
+        context: st.context.clone(),
+        already_completed: true,
+      });
     }
   }
 
