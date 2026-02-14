@@ -29,7 +29,7 @@ The authoritative Attractor specs live in the upstream repo:
 devenv shell -- cargo run --bin run_dot -- examples/workflows/pre-push.dot
 ```
 
-Options (see `run_dot --help` for full usage): **`--agent-cmd`**, **`--stage-dir`** (default: `.attractor`), **`--run-dir`**, **`--resume`**. A checkpoint is written to the run directory (default `.attractor/checkpoint.json`) on successful exit only (no mid-run crash recovery). Use **`--run-dir DIR`** to write the checkpoint to `DIR/checkpoint.json`, and **`--resume DIR`** to resume from `DIR/checkpoint.json` with the same .dot file.
+Options (see `run_dot --help` for full usage): **`--agent-cmd`**, **`--stage-dir`** (default: `.attractor`), **`--run-dir`**, **`--resume`**. Run state is persisted only via the execution log. Use **`--run-dir DIR`** with **`--execution-log`** to write `DIR/execution.log.json`, and **`--resume DIR`** to resume from `DIR/execution.log.json` with the same .dot file.
 
 **Environment variables:**
 

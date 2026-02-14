@@ -49,14 +49,19 @@ impl GraphPayload {
     }
   }
 
-  /// Initial payload for resume: context, current node, and completed nodes from a checkpoint.
-  pub fn from_checkpoint(cp: &super::Checkpoint) -> Self {
+  /// Initial payload for resume: context, current node, and completed nodes from execution log state.
+  pub fn from_resume_state(st: &super::ResumeState) -> Self {
     Self {
-      context: cp.context.clone(),
+      context: st.context.clone(),
       outcome: None,
-      current_node_id: cp.current_node_id.clone(),
-      completed_nodes: cp.completed_nodes.clone(),
+      current_node_id: st.current_node_id.clone(),
+      completed_nodes: st.completed_nodes.clone(),
     }
+  }
+
+  /// Initial payload from checkpoint (in-graph CreateCheckpointNode output).
+  pub fn from_checkpoint(cp: &super::Checkpoint) -> Self {
+    Self::from_resume_state(cp)
   }
 
   /// Returns a new payload with this node recorded as current and completed (for nodes that emit).

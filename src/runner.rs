@@ -5,8 +5,8 @@
 
 use crate::nodes::execution_loop::AttractorResult;
 use crate::nodes::execution_loop::{RunLoopResult, run_execution_loop_once};
-use crate::nodes::init_context::{create_initial_state, create_initial_state_from_checkpoint};
-use crate::types::{AttractorGraph, Checkpoint, ExecutionLog, GraphPayload, NodeOutcome};
+use crate::nodes::init_context::{create_initial_state, create_initial_state_from_resume_state};
+use crate::types::{AttractorGraph, ExecutionLog, GraphPayload, NodeOutcome, ResumeState};
 use std::path::Path;
 use std::sync::Arc;
 use tracing::instrument;
@@ -53,9 +53,9 @@ pub async fn run_streamweave_graph(
 pub struct RunOptions<'a> {
   /// If set, used to derive execution log path when [execution_log_path] is set (e.g. run_dir/execution.log.json).
   pub run_dir: Option<&'a Path>,
-  /// If set, run resumes from this state (entry node and initial payload). Typically from execution log via [crate::execution_log_io::resume_state_from_log].
-  pub resume_checkpoint: Option<Checkpoint>,
-  /// When true and [resume_checkpoint] is set, skip running and return already_completed (e.g. from execution log with finished_at).
+  /// If set, run resumes from this state (from execution log only, no checkpoint.json).
+  pub resume_state: Option<ResumeState>,
+  /// When true and [resume_state] is set, skip running and return already_completed (e.g. from execution log with finished_at).
   pub resume_already_completed: bool,
   /// Command for agent/codergen nodes (e.g. cursor-agent). Required if the graph has codergen nodes.
   pub agent_cmd: Option<String>,
@@ -97,17 +97,17 @@ pub async fn run_compiled_graph(
   ast: &AttractorGraph,
   options: RunOptions<'_>,
 ) -> Result<AttractorResult, String> {
-  if let Some(ref cp) = options.resume_checkpoint {
+  if let Some(ref st) = options.resume_state {
     let exit_id = ast
       .find_exit()
       .map(|n| n.id.clone())
       .ok_or("missing exit node")?;
-    let at_exit = cp.current_node_id == exit_id;
+    let at_exit = st.current_node_id == exit_id;
     if options.resume_already_completed || (at_exit && options.execution_log_path.is_none()) {
       return Ok(AttractorResult {
         last_outcome: NodeOutcome::success("Exit"),
-        completed_nodes: cp.completed_nodes.clone(),
-        context: cp.context.clone(),
+        completed_nodes: st.completed_nodes.clone(),
+        context: st.context.clone(),
         already_completed: true,
       });
     }
@@ -115,8 +115,8 @@ pub async fn run_compiled_graph(
 
   if let Some(ref log_path) = options.execution_log_path {
     let started_at = chrono::Utc::now().to_rfc3339();
-    let mut state = match &options.resume_checkpoint {
-      Some(cp) => create_initial_state_from_checkpoint(ast.clone(), cp, Some(vec![])),
+    let mut state = match &options.resume_state {
+      Some(st) => create_initial_state_from_resume_state(ast.clone(), st, Some(vec![])),
       None => create_initial_state(ast.clone(), Some(vec![])),
     };
     match run_execution_loop_once(&mut state) {
@@ -146,17 +146,17 @@ pub async fn run_compiled_graph(
     .as_deref()
     .or_else(|| Some(std::path::Path::new(crate::DEFAULT_STAGE_DIR)));
   let entry_node_id = options
-    .resume_checkpoint
+    .resume_state
     .as_ref()
-    .map(|cp| cp.current_node_id.as_str());
+    .map(|st| st.current_node_id.as_str());
   let mut graph = crate::compiler::compile_attractor_graph(
     ast,
     entry_node_id,
     options.agent_cmd.as_deref(),
     stage_dir,
   )?;
-  let initial = match &options.resume_checkpoint {
-    Some(cp) => GraphPayload::from_checkpoint(cp),
+  let initial = match &options.resume_state {
+    Some(st) => GraphPayload::from_resume_state(st),
     None => {
       let mut ctx = std::collections::HashMap::new();
       ctx.insert("goal".to_string(), ast.goal.clone());

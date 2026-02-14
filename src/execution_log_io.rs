@@ -1,6 +1,6 @@
 //! Load execution.log.json and derive resume state (for --resume when log is single source).
 
-use crate::types::{Checkpoint, ExecutionLog};
+use crate::types::{ExecutionLog, ResumeState};
 use std::path::Path;
 
 /// Default filename for execution log under a run directory.
@@ -29,17 +29,17 @@ pub fn write_execution_log_partial(path: &Path, log: &ExecutionLog) -> Result<()
   std::fs::write(path, json)
 }
 
-/// Resume state derived from an execution log.
+/// Resume state derived from an execution log (no checkpoint.json).
 pub struct ResumeFromLog {
-  /// Checkpoint to pass to runner (context, current_node_id, completed_nodes).
-  pub checkpoint: Checkpoint,
+  /// State to pass to runner (context, current_node_id, completed_nodes).
+  pub resume_state: ResumeState,
   /// True if the log indicates the run already completed (finished_at set).
   pub already_completed: bool,
 }
 
 /// Derives resume state from a loaded execution log.
-/// - If `finished_at` is set: run completed; returns checkpoint with `current_node_id` set to `exit_node_id` (so runner returns already_completed) and `already_completed: true`.
-/// - If partial (no `finished_at`): returns checkpoint from last step and `already_completed: false`.
+/// - If `finished_at` is set: run completed; returns state with `current_node_id` set to `exit_node_id` (so runner returns already_completed) and `already_completed: true`.
+/// - If partial (no `finished_at`): returns state from last step and `already_completed: false`.
 /// - If log has no steps and no finished_at: returns None.
 pub fn resume_state_from_log(
   log: &ExecutionLog,
@@ -52,7 +52,7 @@ pub fn resume_state_from_log(
       .or_else(|| log.completed_nodes.last().cloned())
       .unwrap_or_default();
     return Some(ResumeFromLog {
-      checkpoint: Checkpoint {
+      resume_state: ResumeState {
         context: log
           .steps
           .last()
@@ -71,7 +71,7 @@ pub fn resume_state_from_log(
     .or_else(|| last.completed_nodes_after.last().cloned())
     .unwrap_or_default();
   Some(ResumeFromLog {
-    checkpoint: Checkpoint {
+    resume_state: ResumeState {
       context: last.context_after.clone(),
       current_node_id,
       completed_nodes: last.completed_nodes_after.clone(),
@@ -152,7 +152,7 @@ mod tests {
     assert_eq!(loaded.completed_nodes, vec!["start", "exit"]);
     let r = resume_state_from_log(&loaded, Some("exit")).expect("resume state");
     assert!(r.already_completed);
-    assert_eq!(r.checkpoint.current_node_id, "exit");
-    assert_eq!(r.checkpoint.completed_nodes, vec!["start", "exit"]);
+    assert_eq!(r.resume_state.current_node_id, "exit");
+    assert_eq!(r.resume_state.completed_nodes, vec!["start", "exit"]);
   }
 }

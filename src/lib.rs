@@ -11,7 +11,7 @@
 //! Supporting nodes: ApplyContextUpdatesNode, CheckGoalGatesNode,
 //! CreateCheckpointNode, FindStartNode, etc.
 
-/// Default directory for outcome.json, checkpoint, and staging when not overridden.
+/// Default directory for outcome.json and staging when not overridden.
 pub const DEFAULT_STAGE_DIR: &str = ".attractor";
 pub(crate) mod agent_run;
 pub mod execution_log_io;

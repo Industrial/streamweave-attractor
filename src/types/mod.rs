@@ -34,6 +34,8 @@ pub use attractor_edge::AttractorEdge;
 pub use attractor_graph::AttractorGraph;
 pub use attractor_node::AttractorNode;
 pub use checkpoint::Checkpoint;
+/// Resume state (context, current node, completed nodes). Used by --resume from execution log only. Same shape as [Checkpoint] but not persisted as checkpoint.json.
+pub type ResumeState = Checkpoint;
 pub use execution_log::{ExecutionLog, ExecutionStepEntry};
 pub use execution_state::ExecutionState;
 pub use graph_payload::GraphPayload;

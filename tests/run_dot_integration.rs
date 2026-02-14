@@ -301,7 +301,7 @@ async fn execution_log_path_writes_execution_log_json() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
-      resume_checkpoint: None,
+      resume_state: None,
       resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
@@ -346,7 +346,7 @@ async fn pre_push_dot_via_run_compiled_graph() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
-      resume_checkpoint: None,
+      resume_state: None,
       resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
@@ -384,7 +384,7 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
-      resume_checkpoint: None,
+      resume_state: None,
       resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
@@ -426,7 +426,7 @@ async fn run_dir_writes_execution_log() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
-      resume_checkpoint: None,
+      resume_state: None,
       resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
@@ -480,7 +480,7 @@ async fn resume_from_checkpoint_completes() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
-      resume_checkpoint: None,
+      resume_state: None,
       resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
@@ -501,7 +501,7 @@ async fn resume_from_checkpoint_completes() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
-      resume_checkpoint: Some(resume.checkpoint),
+      resume_state: Some(resume.resume_state),
       resume_already_completed: resume.already_completed,
       agent_cmd: None,
       stage_dir: None,
@@ -575,7 +575,7 @@ async fn resume_from_partial_log() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
-      resume_checkpoint: Some(resume.checkpoint),
+      resume_state: Some(resume.resume_state),
       resume_already_completed: resume.already_completed,
       agent_cmd: None,
       stage_dir: None,
@@ -613,7 +613,7 @@ async fn resume_from_completed_log_returns_already_completed() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
-      resume_checkpoint: None,
+      resume_state: None,
       resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
@@ -637,7 +637,7 @@ async fn resume_from_completed_log_returns_already_completed() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
-      resume_checkpoint: Some(resume.checkpoint),
+      resume_state: Some(resume.resume_state),
       resume_already_completed: resume.already_completed,
       agent_cmd: None,
       stage_dir: None,
@@ -689,7 +689,7 @@ async fn tdd_codergen_error_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
-        resume_checkpoint: None,
+        resume_state: None,
         resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,
@@ -733,7 +733,7 @@ async fn tdd_codergen_success_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
-        resume_checkpoint: None,
+        resume_state: None,
         resume_already_completed: false,
         agent_cmd: Some("true".to_string()),
         stage_dir: None,
@@ -778,7 +778,7 @@ async fn tdd_exec_error_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
-        resume_checkpoint: None,
+        resume_state: None,
         resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,
@@ -822,7 +822,7 @@ async fn tdd_cyclic_exec_error_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
-        resume_checkpoint: None,
+        resume_state: None,
         resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,
@@ -859,7 +859,7 @@ async fn tdd_exec_success_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
-        resume_checkpoint: None,
+        resume_state: None,
         resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,
@@ -902,7 +902,7 @@ async fn tdd_cyclic_codergen_error_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
-        resume_checkpoint: None,
+        resume_state: None,
         resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,

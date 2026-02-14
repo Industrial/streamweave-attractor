@@ -131,7 +131,7 @@ async fn main() {
     }
   };
 
-  let (resume_checkpoint, resume_already_completed) =
+  let (resume_state, resume_already_completed) =
     args.resume.as_ref().map_or((None, false), |dir| {
       let log_path = dir.join(execution_log_io::EXECUTION_LOG_FILENAME);
       if !log_path.exists() {
@@ -148,7 +148,7 @@ async fn main() {
       });
       let exit_id = ast.find_exit().map(|n| n.id.as_str());
       match execution_log_io::resume_state_from_log(&log, exit_id) {
-        Some(r) => (Some(r.checkpoint), r.already_completed),
+        Some(r) => (Some(r.resume_state), r.already_completed),
         None => {
           eprintln!(
             "Error: execution log at {} has no steps and no finished_at; cannot resume.",
@@ -161,7 +161,7 @@ async fn main() {
 
   let options = RunOptions {
     run_dir: run_dir_for_options,
-    resume_checkpoint,
+    resume_state,
     resume_already_completed,
     agent_cmd,
     stage_dir: Some(stage_dir),

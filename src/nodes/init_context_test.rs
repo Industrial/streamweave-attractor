@@ -9,7 +9,7 @@ use tokio_stream::wrappers::ReceiverStream;
 
 use super::InitContextNode;
 use super::init_context::{
-  create_initial_state, create_initial_state_from_checkpoint, process_init_context_item,
+  create_initial_state, create_initial_state_from_resume_state, process_init_context_item,
 };
 
 #[tokio::test]
@@ -111,17 +111,17 @@ fn process_init_context_item_returns_none_for_wrong_type() {
 }
 
 #[test]
-fn create_initial_state_from_checkpoint_restores_context_and_node() {
+fn create_initial_state_from_resume_state_restores_context_and_node() {
   let dot = r#"digraph G { start [shape=Mdiamond] exit [shape=Msquare] start -> exit }"#;
   let graph = crate::dot_parser::parse_dot(dot).unwrap();
   let mut ctx = HashMap::new();
   ctx.insert("resumed".to_string(), "1".to_string());
-  let cp = crate::types::Checkpoint {
+  let st = crate::types::ResumeState {
     context: ctx,
     current_node_id: "exit".to_string(),
     completed_nodes: vec!["start".to_string(), "exit".to_string()],
   };
-  let state = create_initial_state_from_checkpoint(graph, &cp, None);
+  let state = create_initial_state_from_resume_state(graph, &st, None);
   assert_eq!(state.current_node_id, "exit");
   assert_eq!(state.context.get("resumed").map(String::as_str), Some("1"));
   assert_eq!(state.completed_nodes, &["start", "exit"]);

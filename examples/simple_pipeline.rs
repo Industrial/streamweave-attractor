@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     &ast,
     RunOptions {
       run_dir: None,
-      resume_checkpoint: None,
+      resume_state: None,
       resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
