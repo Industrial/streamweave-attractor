@@ -19,7 +19,10 @@ pub struct GraphPayload {
 }
 
 impl GraphPayload {
-  #[instrument(level = "trace", skip(context, outcome, current_node_id, completed_nodes))]
+  #[instrument(
+    level = "trace",
+    skip(context, outcome, current_node_id, completed_nodes)
+  )]
   pub fn new(
     context: RunContext,
     outcome: Option<NodeOutcome>,

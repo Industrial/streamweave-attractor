@@ -110,7 +110,7 @@ impl Node for ExecNode {
           let arc = Arc::new(payload) as Arc<dyn Any + Send + Sync>;
           // Process all items (while let); cyclic graphs (e.g. beads-worker-loop) feed multiple items.
           // Drop both senders after loop to close output streams.
-          
+
           if is_success {
             tracing::trace!(node = %name, "ExecNode sending to out port");
             tracing::info!(node = %name, "finished: success");

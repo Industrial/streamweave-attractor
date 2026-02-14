@@ -4,8 +4,8 @@
 //! - [run_compiled_graph]: compile AST then run, return [crate::nodes::execution_loop::AttractorResult].
 
 use crate::checkpoint_io::{self, CHECKPOINT_FILENAME};
-use crate::nodes::execution_loop::{run_execution_loop_once, RunLoopResult};
 use crate::nodes::execution_loop::AttractorResult;
+use crate::nodes::execution_loop::{RunLoopResult, run_execution_loop_once};
 use crate::nodes::init_context::create_initial_state;
 use crate::types::{AttractorGraph, Checkpoint, ExecutionLog, GraphPayload, NodeOutcome};
 use std::path::Path;
@@ -111,11 +111,7 @@ pub async fn run_compiled_graph(
         if let Some(run_dir) = options.run_dir {
           let cp = Checkpoint {
             context: result.context.clone(),
-            current_node_id: result
-              .completed_nodes
-              .last()
-              .cloned()
-              .unwrap_or_default(),
+            current_node_id: result.completed_nodes.last().cloned().unwrap_or_default(),
             completed_nodes: result.completed_nodes.clone(),
           };
           let path = run_dir.join(CHECKPOINT_FILENAME);
@@ -136,12 +132,8 @@ pub async fn run_compiled_graph(
     .stage_dir
     .as_deref()
     .or_else(|| Some(std::path::Path::new(crate::DEFAULT_STAGE_DIR)));
-  let mut graph = crate::compiler::compile_attractor_graph(
-    ast,
-    None,
-    options.agent_cmd.as_deref(),
-    stage_dir,
-  )?;
+  let mut graph =
+    crate::compiler::compile_attractor_graph(ast, None, options.agent_cmd.as_deref(), stage_dir)?;
   let mut ctx = std::collections::HashMap::new();
   ctx.insert("goal".to_string(), ast.goal.clone());
   ctx.insert("graph.goal".to_string(), ast.goal.clone());

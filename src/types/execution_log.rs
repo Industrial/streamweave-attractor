@@ -102,7 +102,10 @@ mod tests {
     assert_eq!(parsed["node_id"], "start");
     assert_eq!(parsed["handler_type"], "start");
     assert_eq!(parsed["next_node_id"], "next");
-    assert_eq!(parsed["completed_nodes_after"], serde_json::json!(["start"]));
+    assert_eq!(
+      parsed["completed_nodes_after"],
+      serde_json::json!(["start"])
+    );
     assert_eq!(parsed["outcome"]["status"], "success");
   }
 

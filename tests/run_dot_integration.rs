@@ -62,6 +62,75 @@ fn run_dot_succeeds_with_minimal_start_exit_dot() {
   assert!(stdout.contains("Success") || stdout.contains("completed"));
 }
 
+#[test]
+fn run_dot_execution_log_cli_writes_log_file() {
+  let dir = tempfile::tempdir().expect("temp dir");
+  let path = dir.path().join("minimal.dot");
+  let log_path = dir.path().join("execution.log.json");
+  std::fs::write(
+    &path,
+    r#"digraph G {
+  graph [goal="test"]
+  start [shape=Mdiamond]
+  exit [shape=Msquare]
+  start -> exit
+}"#,
+  )
+  .expect("write dot");
+
+  let path_str = path.to_str().expect("path");
+  let log_path_str = log_path.to_str().expect("log path");
+  let out = run_run_dot(&["--execution-log", log_path_str, path_str]);
+  assert!(
+    out.status.success(),
+    "stderr: {} stdout: {}",
+    String::from_utf8_lossy(&out.stderr),
+    String::from_utf8_lossy(&out.stdout)
+  );
+  assert!(log_path.exists(), "execution log file should exist");
+  let content = std::fs::read_to_string(&log_path).expect("read execution log");
+  let log: serde_json::Value = serde_json::from_str(&content).expect("parse execution log JSON");
+  assert_eq!(log["version"], 1);
+  assert_eq!(log["goal"], "test");
+  assert_eq!(log["final_status"], "success");
+}
+
+#[test]
+fn run_dot_execution_log_cli_default_path_under_stage_dir() {
+  let dir = tempfile::tempdir().expect("temp dir");
+  let stage = dir.path().join("stage");
+  std::fs::create_dir_all(&stage).expect("create stage dir");
+  let path = dir.path().join("minimal.dot");
+  std::fs::write(
+    &path,
+    r#"digraph G {
+  graph [goal="test"]
+  start [shape=Mdiamond]
+  exit [shape=Msquare]
+  start -> exit
+}"#,
+  )
+  .expect("write dot");
+
+  let path_str = path.to_str().expect("path");
+  let stage_str = stage.to_str().expect("stage");
+  let out = run_run_dot(&["--execution-log", "--stage-dir", stage_str, path_str]);
+  assert!(
+    out.status.success(),
+    "stderr: {} stdout: {}",
+    String::from_utf8_lossy(&out.stderr),
+    String::from_utf8_lossy(&out.stdout)
+  );
+  let default_log = stage.join("execution.log.json");
+  assert!(
+    default_log.exists(),
+    "execution log should be at <stage_dir>/execution.log.json"
+  );
+  let content = std::fs::read_to_string(&default_log).expect("read execution log");
+  let log: serde_json::Value = serde_json::from_str(&content).expect("parse execution log JSON");
+  assert_eq!(log["final_status"], "success");
+}
+
 /// When execution_log_path is set, runner writes execution.log.json on completion (success path).
 #[tokio::test]
 async fn execution_log_path_writes_execution_log_json() {

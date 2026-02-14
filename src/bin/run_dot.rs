@@ -15,10 +15,9 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process;
-use streamweave_attractor::{RunOptions, dot_parser, run_compiled_graph, DEFAULT_STAGE_DIR};
+use streamweave_attractor::{DEFAULT_STAGE_DIR, RunOptions, dot_parser, run_compiled_graph};
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
-
 
 /// Run an Attractor pipeline from a .dot file.
 ///
@@ -29,11 +28,14 @@ use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
   after_help = r#"Environment variables (override --agent-cmd and --stage-dir when set):
   ATTRACTOR_AGENT_CMD   Command for agent/codergen nodes (e.g. cursor-agent). When set, agent steps
                         run this with prompt as stdin; outcome read from ATTRACTOR_STAGE_DIR.
-  ATTRACTOR_STAGE_DIR   Directory for outcome.json and staging (default: .attractor).
+  ATTRACTOR_STAGE_DIR      Directory for outcome.json and staging (default: .attractor).
+  ATTRACTOR_EXECUTION_LOG  Unset=off. 1 or true=write execution log to <stage_dir>/execution.log.json.
+                           Any other value=path to execution log file. Overridden by --execution-log.
 
 Examples:
   run_dot examples/workflows/pre-push.dot
-  run_dot --stage-dir /tmp/stage examples/workflows/pre-push.dot"#
+  run_dot --stage-dir /tmp/stage examples/workflows/pre-push.dot
+  run_dot --execution-log /tmp/execution.log.json examples/workflows/pre-push.dot"#
 )]
 struct Args {
   /// Command for agent/codergen nodes (e.g. cursor-agent). Overridden by ATTRACTOR_AGENT_CMD if set.
@@ -43,6 +45,10 @@ struct Args {
   /// Directory for outcome.json and staging. Overridden by ATTRACTOR_STAGE_DIR if set. Default: .attractor
   #[arg(long, value_name = "DIR", default_value = DEFAULT_STAGE_DIR)]
   stage_dir: PathBuf,
+
+  /// Write execution log to PATH (default: <stage_dir>/execution.log.json). Overrides ATTRACTOR_EXECUTION_LOG.
+  #[arg(long = "execution-log", value_name = "PATH", num_args = 0..=1)]
+  execution_log: Option<Option<PathBuf>>,
 
   /// Path to the .dot workflow file
   #[arg(value_name = "path-to-dot-file")]
@@ -71,7 +77,21 @@ async fn main() {
     .unwrap_or_else(|| PathBuf::from(DEFAULT_STAGE_DIR));
   let run_dir = PathBuf::from(DEFAULT_STAGE_DIR);
 
-  info!(agent_cmd = ?agent_cmd, stage_dir = %stage_dir.display(), run_dir = %run_dir.display(), "options (env or flags)");
+  let default_execution_log_path = stage_dir.join("execution.log.json");
+  let execution_log_from_env = env::var("ATTRACTOR_EXECUTION_LOG").ok().map(|v| {
+    let v = v.trim();
+    if v == "1" || v.eq_ignore_ascii_case("true") {
+      default_execution_log_path.clone()
+    } else {
+      PathBuf::from(v)
+    }
+  });
+  let execution_log_path = args
+    .execution_log
+    .map(|opt| opt.unwrap_or(default_execution_log_path))
+    .or(execution_log_from_env);
+
+  info!(agent_cmd = ?agent_cmd, stage_dir = %stage_dir.display(), run_dir = %run_dir.display(), execution_log_path = ?execution_log_path, "options (env or flags)");
 
   let path = &args.dot_path;
   let dot = match fs::read_to_string(path) {
@@ -94,7 +114,7 @@ async fn main() {
     run_dir: Some(run_dir.as_path()),
     agent_cmd,
     stage_dir: Some(stage_dir),
-    execution_log_path: None,
+    execution_log_path,
   };
 
   let r = match run_compiled_graph(&ast, options).await {
