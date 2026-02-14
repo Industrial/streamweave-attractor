@@ -6,8 +6,10 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::process::Command;
+use tracing::instrument;
 
 /// Reads outcome.json from stage_dir. Returns context_updates if present.
+#[instrument(level = "trace", skip(stage_dir))]
 pub(crate) fn read_outcome_json(
   stage_dir: Option<&std::path::Path>,
 ) -> Option<HashMap<String, String>> {
@@ -32,6 +34,7 @@ pub(crate) fn read_outcome_json(
 
 /// Runs the agent command with prompt as stdin; returns NodeOutcome based on exit code.
 /// Used by the compiled workflow and by CodergenNode.
+#[instrument(level = "trace", skip(agent_cmd, prompt, stage_dir))]
 pub(crate) fn run_agent(
   agent_cmd: &str,
   prompt: &str,

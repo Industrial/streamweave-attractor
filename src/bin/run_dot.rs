@@ -51,6 +51,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
+  tracing::trace!("run_dot main entered");
   tracing_subscriber::fmt()
     .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
     .with_span_events(FmtSpan::ENTER | FmtSpan::EXIT)

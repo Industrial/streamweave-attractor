@@ -1,21 +1,27 @@
 //! A node in the Attractor DOT graph (parsed from DOT).
+use tracing::instrument;
 
 /// Returns true if the shape indicates a start node (Mdiamond).
+#[instrument(level = "trace", skip(shape))]
+#[instrument(level = "trace", skip(shape))]
 pub(crate) fn shape_is_start(shape: &str) -> bool {
   shape.eq_ignore_ascii_case("Mdiamond")
 }
 
 /// Returns true if the shape indicates an exit node (Msquare).
+#[instrument(level = "trace", skip(shape))]
 pub(crate) fn shape_is_exit(shape: &str) -> bool {
   shape.eq_ignore_ascii_case("Msquare")
 }
 
 /// Returns true if the id indicates a start node.
+#[instrument(level = "trace", skip(id))]
 pub(crate) fn id_is_start(id: &str) -> bool {
   id.eq_ignore_ascii_case("start")
 }
 
 /// Returns true if the id indicates an exit node.
+#[instrument(level = "trace", skip(id))]
 pub(crate) fn id_is_exit(id: &str) -> bool {
   id.eq_ignore_ascii_case("exit")
 }

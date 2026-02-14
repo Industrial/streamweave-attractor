@@ -54,7 +54,7 @@ impl Node for FixNode {
   > {
     let name = self.name.clone();
     Box::pin(async move {
-      tracing::trace!(node = %name, "FixNode executing");
+      tracing::trace!(node = %name, "FixNode execute entered");
       let in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
       let (tx, rx) = mpsc::channel(16);
       tokio::spawn(async move {

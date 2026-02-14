@@ -1,6 +1,7 @@
 //! Execution state for one step of the Attractor loop.
 
 use std::collections::HashMap;
+use tracing::instrument;
 
 use super::{AttractorGraph, ExecutionStepEntry, NodeOutcome, RunContext};
 
@@ -17,6 +18,7 @@ pub struct ExecutionState {
 }
 
 impl ExecutionState {
+  #[instrument(level = "trace")]
   pub fn is_done(&self) -> bool {
     self
       .graph

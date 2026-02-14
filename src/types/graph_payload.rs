@@ -4,6 +4,7 @@
 //! Tracks current_node_id and completed_nodes for checkpoint.
 
 use super::{NodeOutcome, RunContext};
+use tracing::instrument;
 
 /// Payload flowing through the compiled graph: context plus optional last outcome.
 /// Nodes that produce outcomes (Exec, Codergen) merge outcome.context_updates into context.
@@ -18,6 +19,7 @@ pub struct GraphPayload {
 }
 
 impl GraphPayload {
+  #[instrument(level = "trace", skip(context, outcome, current_node_id, completed_nodes))]
   pub fn new(
     context: RunContext,
     outcome: Option<NodeOutcome>,
@@ -33,6 +35,7 @@ impl GraphPayload {
   }
 
   /// Initial payload for graph entry (e.g. from start node).
+  #[instrument(level = "trace", skip(context, start_node_id))]
   pub fn initial(context: RunContext, start_node_id: impl Into<String>) -> Self {
     let start = start_node_id.into();
     Self {
@@ -44,6 +47,7 @@ impl GraphPayload {
   }
 
   /// Returns a new payload with this node recorded as current and completed (for nodes that emit).
+  #[instrument(level = "trace", skip(self, node_id))]
   pub fn with_node_completed(&self, node_id: impl Into<String>) -> Self {
     let node_id = node_id.into();
     let mut completed = self.completed_nodes.clone();

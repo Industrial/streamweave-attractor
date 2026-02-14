@@ -5,11 +5,13 @@
 
 use crate::nodes::IdentityNode;
 use streamweave::graph::Graph;
+use tracing::instrument;
 
 /// Trivial start→exit pipeline: one identity from input to output.
 ///
 /// Node names are `start` and `exit` to match the Attractor convention.
 /// Graph I/O: `input` → start.in, exit.out → `output`.
+#[instrument(level = "trace")]
 pub fn trivial_start_exit_graph() -> Graph {
   streamweave::graph! {
     start: IdentityNode::new("start"),

@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use serde::Serialize;
+use tracing::instrument;
 
 use super::OutcomeStatus;
 
@@ -18,6 +19,7 @@ pub struct NodeOutcome {
 }
 
 impl NodeOutcome {
+  #[instrument(level = "trace", skip(notes))]
   pub fn success(notes: impl Into<String>) -> Self {
     Self {
       status: OutcomeStatus::Success,
@@ -29,6 +31,7 @@ impl NodeOutcome {
     }
   }
 
+  #[instrument(level = "trace", skip(reason))]
   pub fn error(reason: impl Into<String>) -> Self {
     Self {
       status: OutcomeStatus::Error,

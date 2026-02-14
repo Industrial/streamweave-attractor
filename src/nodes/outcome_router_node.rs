@@ -72,6 +72,7 @@ impl Node for OutcomeRouterNode {
       tokio::spawn(async move {
         use futures::StreamExt;
         while let Some(item) = in_stream.next().await {
+          tracing::trace!(node = %name, "OutcomeRouterNode received item, routing");
           let item2 = item.clone();
           if let Ok(payload) = item.downcast::<GraphPayload>() {
             let is_success = payload.outcome.as_ref().is_none_or(|o| {

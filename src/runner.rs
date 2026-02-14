@@ -8,12 +8,14 @@ use crate::nodes::execution_loop::AttractorResult;
 use crate::types::{AttractorGraph, Checkpoint, GraphPayload, NodeOutcome};
 use std::path::Path;
 use std::sync::Arc;
+use tracing::instrument;
 
 /// Runs a compiled StreamWeave graph: feeds one trigger into the "input" port,
 /// runs until the graph produces output on the "output" port, then returns the first output item.
 ///
 /// The graph must have been built with `input` and `output` port names (as produced by
 /// [crate::compile_attractor_graph].
+#[instrument(level = "trace", skip(graph, initial))]
 pub async fn run_streamweave_graph(
   mut graph: streamweave::graph::Graph,
   initial: GraphPayload,
@@ -34,8 +36,11 @@ pub async fn run_streamweave_graph(
     .map_err(|e| e.to_string())?;
   drop(tx_in);
 
+  tracing::trace!("run_streamweave_graph: calling graph.execute()");
   graph.execute().await.map_err(|e| e.to_string())?;
+  tracing::trace!("run_streamweave_graph: execute done, waiting for output on rx_out.recv()");
   let first = rx_out.recv().await;
+  tracing::trace!("run_streamweave_graph: received output, calling wait_for_completion()");
   graph
     .wait_for_completion()
     .await
@@ -55,6 +60,7 @@ pub struct RunOptions<'a> {
 
 /// Compiles the Attractor graph to a StreamWeave graph, runs it, and returns an [AttractorResult].
 /// Uses [crate::compile_attractor_graph]. Initial context includes the graph goal.
+#[instrument(level = "trace", skip(ast, options))]
 pub async fn run_compiled_graph(
   ast: &AttractorGraph,
   options: RunOptions<'_>,
@@ -94,8 +100,11 @@ pub async fn run_compiled_graph(
     .map_err(|e| e.to_string())?;
   drop(tx_in);
 
+  tracing::trace!("run_streamweave_graph: calling graph.execute()");
   graph.execute().await.map_err(|e| e.to_string())?;
+  tracing::trace!("run_streamweave_graph: execute done, waiting for output on rx_out.recv()");
   let first = rx_out.recv().await;
+  tracing::trace!("run_streamweave_graph: received output, calling wait_for_completion()");
   graph
     .wait_for_completion()
     .await
