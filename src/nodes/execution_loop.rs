@@ -45,9 +45,17 @@ pub(crate) enum RunLoopResult {
   Err(String),
 }
 
+/// Optional callback invoked after each step (e.g. to persist execution log). If it returns `Err`, the loop returns that error.
+pub(crate) type AfterStepCallback<'a> =
+  Option<&'a mut dyn FnMut(&ExecutionState) -> Result<(), String>>;
+
 /// Runs the execution loop on one ExecutionState; returns result or error.
-#[instrument(level = "trace", skip(state))]
-pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResult {
+/// When `after_step` is `Some`, it is invoked after each step (after step_log is updated); persist failures propagate as `RunLoopResult::Err`.
+#[instrument(level = "trace", skip(state, after_step))]
+pub(crate) fn run_execution_loop_once(
+  state: &mut ExecutionState,
+  mut after_step: AfterStepCallback<'_>,
+) -> RunLoopResult {
   let max_iter = 1000;
   let mut iter = 0;
   let mut last_outcome;
@@ -102,6 +110,12 @@ pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResu
         next_node_id.clone(),
         completed_nodes_after,
       ));
+    }
+
+    if let Some(cb) = &mut after_step {
+      if let Err(e) = cb(state) {
+        return RunLoopResult::Err(e);
+      }
     }
 
     match sel_out.next_node_id {
@@ -195,7 +209,7 @@ impl Node for AttractorExecutionLoopNode {
             }
           };
 
-          match run_execution_loop_once(&mut state) {
+          match run_execution_loop_once(&mut state, None) {
             RunLoopResult::Ok(result) => {
               let _ = out_tx
                 .send(Arc::new(result) as Arc<dyn Any + Send + Sync>)

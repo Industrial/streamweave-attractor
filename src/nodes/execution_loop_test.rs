@@ -159,7 +159,7 @@ fn run_execution_loop_once_returns_ok_for_simple_pipeline() {
     node_outcomes: HashMap::new(),
     step_log: None,
   };
-  match run_execution_loop_once(&mut state) {
+  match run_execution_loop_once(&mut state, None) {
     RunLoopResult::Ok(r) => {
       assert_eq!(r.completed_nodes, vec!["start", "exit"]);
     }
@@ -199,7 +199,7 @@ fn run_execution_loop_once_returns_err_when_node_not_found() {
     node_outcomes: HashMap::new(),
     step_log: None,
   };
-  match run_execution_loop_once(&mut state) {
+  match run_execution_loop_once(&mut state, None) {
     RunLoopResult::Err(e) => assert!(e.contains("Node not found")),
     RunLoopResult::Ok(_) => panic!("expected Err"),
   }
@@ -220,7 +220,7 @@ fn run_execution_loop_once_records_steps_when_step_log_is_some() {
     node_outcomes: HashMap::new(),
     step_log: step_log.clone(),
   };
-  match run_execution_loop_once(&mut state) {
+  match run_execution_loop_once(&mut state, None) {
     RunLoopResult::Ok(r) => {
       assert_eq!(r.completed_nodes, vec!["start", "exit"]);
     }

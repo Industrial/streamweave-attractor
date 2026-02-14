@@ -11,7 +11,7 @@ digraph BeadsWorkerLoop {
   pick_task [
     shape=box,
     label="Pick task (AI)",
-    prompt="You are the beads-worker. Ensure exactly one task is in progress and set context key ready_task_id to that task id. Use devenv shell for all bd commands.\n\n1. List in-progress: devenv shell -- bd list --status=in_progress --json\n2. If multiple in-progress: choose one to keep; for each of the others run: devenv shell -- bd update <id> --status open --json. Set ready_task_id to the id you kept. Exit 0.\n3. If exactly one in-progress: set ready_task_id to that id. Exit 0.\n4. If zero in-progress: run devenv shell -- bd ready --json. If the list is empty, exit 1 (no work). Otherwise pick the first task, run: devenv shell -- bd update <id> --status in_progress --claim --json, set ready_task_id to that id. Exit 0.\n\nWrite outcome (success/fail) and context_updates (ready_task_id) to the stage outcome so the pipeline can continue. Exit 0 when a task is picked; exit 1 when there is no task to do."
+    prompt="Run `devenv shell -- bd list --status=in_progress --json`. When there are tasks in progress, run `devenv shell -- bd update <id> --status open --json` for each of them. Then run `devenv shell -- bd ready --json`. If the list is empty, exit 1 (no work). Otherwise pick the first task, run: `devenv shell -- bd update <id> --status in_progress --claim --json`, set ready_task_id to that id. Exit 0."
   ]
 
   implement [shape=box, label="Implement", prompt="You are the beads-worker (see .cursor/agents/beads-worker.md). Implement the claimed task. Follow project rules: Effect.ts, devenv shell, no todo_write. Run tests/linters for changed code. Do not run bd close or git commit yet. Exit 0 when done."]

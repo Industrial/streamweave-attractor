@@ -4,6 +4,7 @@
 //! - [run_compiled_graph]: compile AST then run, return [crate::nodes::execution_loop::AttractorResult].
 
 use crate::nodes::execution_loop::AttractorResult;
+use crate::execution_log_io::write_execution_log_partial;
 use crate::nodes::execution_loop::{RunLoopResult, run_execution_loop_once};
 use crate::nodes::init_context::{create_initial_state, create_initial_state_from_resume_state};
 use crate::types::{AttractorGraph, ExecutionLog, GraphPayload, NodeOutcome, ResumeState};
@@ -115,11 +116,24 @@ pub async fn run_compiled_graph(
 
   if let Some(ref log_path) = options.execution_log_path {
     let started_at = chrono::Utc::now().to_rfc3339();
+    let goal = ast.goal.clone();
     let mut state = match &options.resume_state {
       Some(st) => create_initial_state_from_resume_state(ast.clone(), st, Some(vec![])),
       None => create_initial_state(ast.clone(), Some(vec![])),
     };
-    match run_execution_loop_once(&mut state) {
+    let mut after_step = |st: &crate::types::ExecutionState| {
+      let log = ExecutionLog {
+        version: 1,
+        goal: goal.clone(),
+        started_at: started_at.clone(),
+        finished_at: None,
+        final_status: "in_progress".to_string(),
+        completed_nodes: st.completed_nodes.clone(),
+        steps: st.step_log.clone().unwrap_or_default(),
+      };
+      write_execution_log_partial(log_path, &log).map_err(|e| e.to_string())
+    };
+    match run_execution_loop_once(&mut state, Some(&mut after_step)) {
       RunLoopResult::Ok(result) => {
         let steps = state.step_log.unwrap_or_default();
         write_execution_log(
