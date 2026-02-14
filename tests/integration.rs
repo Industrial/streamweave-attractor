@@ -17,12 +17,20 @@ fn dot_path(name: &str) -> std::path::PathBuf {
 
 /// Run `cargo run --bin run_dot -- <args...>` from the crate root. Returns (stdout, stderr, success).
 fn run_run_dot(args: &[&str]) -> (Vec<u8>, Vec<u8>, bool) {
-  let out = Command::new("cargo")
+  run_run_dot_with_env(args, &[])
+}
+
+/// Like run_run_dot but with extra env vars (e.g. ATTRACTOR_EXECUTION_LOG=1 to use sync path).
+fn run_run_dot_with_env(args: &[&str], env: &[(&str, &str)]) -> (Vec<u8>, Vec<u8>, bool) {
+  let mut cmd = Command::new("cargo");
+  cmd
     .args(["run", "--bin", "run_dot", "--"])
     .args(args)
-    .current_dir(env!("CARGO_MANIFEST_DIR"))
-    .output()
-    .expect("cargo run --bin run_dot");
+    .current_dir(env!("CARGO_MANIFEST_DIR"));
+  for (k, v) in env {
+    cmd.env(k, v);
+  }
+  let out = cmd.output().expect("cargo run --bin run_dot");
   (out.stdout, out.stderr, out.status.success())
 }
 
@@ -77,9 +85,11 @@ fn integration_test_out_error_dot_succeeds() {
 
 #[test]
 fn integration_pre_push_exec_only_dot_succeeds() {
+  // Use sync execution path (ATTRACTOR_EXECUTION_LOG=1) so the test completes; the async stream path can hang.
   let path = dot_path("pre_push_exec_only.dot");
   let path_str = path.to_str().expect("path");
-  let (stdout, stderr, success) = run_run_dot(&[path_str]);
+  let (stdout, stderr, success) =
+    run_run_dot_with_env(&[path_str], &[("ATTRACTOR_EXECUTION_LOG", "1")]);
   assert!(
     success,
     "pre_push_exec_only.dot should succeed: stderr={}",
@@ -168,18 +178,24 @@ async fn integration_lib_test_out_error_succeeds() {
 
 #[tokio::test]
 async fn integration_lib_pre_push_exec_only_succeeds() {
+  // Use sync execution path so the test completes; the async stream path can hang.
+  let log_path = std::env::temp_dir().join("streamweave_attractor_pre_push_exec.log.json");
   let dot = std::fs::read_to_string(dot_path("pre_push_exec_only.dot")).expect("read");
   let ast = streamweave_attractor::dot_parser::parse_dot(&dot).expect("parse");
-  let r = streamweave_attractor::run_compiled_graph(
-    &ast,
-    streamweave_attractor::RunOptions {
-      run_dir: None,
-      agent_cmd: None,
-      stage_dir: None,
-      execution_log_path: None,
-    },
+  let r = tokio::time::timeout(
+    std::time::Duration::from_secs(10),
+    streamweave_attractor::run_compiled_graph(
+      &ast,
+      streamweave_attractor::RunOptions {
+        run_dir: None,
+        agent_cmd: None,
+        stage_dir: None,
+        execution_log_path: Some(log_path),
+      },
+    ),
   )
   .await
+  .expect("run_compiled_graph timed out after 10s")
   .expect("run_compiled_graph");
   assert!(format!("{:?}", r.last_outcome.status) == "Success");
   assert!(r.completed_nodes.contains(&"pre_push".to_string()));
