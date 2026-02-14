@@ -30,13 +30,13 @@
         cargoLock.lockFile = self + "/Cargo.lock";
         nativeBuildInputs = [pkgs.pkg-config];
         buildInputs = [pkgs.openssl];
-        cargoBuildFlags = ["--example" "simple_pipeline"];
+        cargoBuildFlags = ["--bin" "run_dot"];
         installPhase = ''
           runHook preInstall
-          # buildRustPackage build phase may not build the example; build it here so it exists
-          cargo build --release --example simple_pipeline
+          # buildRustPackage build phase may not build the bin; build it here so it exists
+          cargo build --release --bin run_dot
           mkdir -p $out/bin
-          cp target/release/examples/simple_pipeline $out/bin/streamweave-attractor
+          cp target/release/run_dot $out/bin/streamweave-attractor
           runHook postInstall
         '';
       };
