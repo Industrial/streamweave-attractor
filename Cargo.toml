@@ -1,6 +1,6 @@
 [package]
 name = "streamweave-attractor"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 authors = ["Tom Wieland <tom.wieland@gmail.com>"]
 license = "CC-BY-SA-4.0"

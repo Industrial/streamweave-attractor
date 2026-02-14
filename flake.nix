@@ -25,7 +25,7 @@
       # Cargo.lock must be committed so the flake input has it (see README).
       defaultPackage = pkgs.rustPlatform.buildRustPackage {
         pname = "streamweave-attractor";
-        version = "0.1.4";
+        version = "0.1.5";
         src = self;
         cargoLock.lockFile = self + "/Cargo.lock";
         nativeBuildInputs = [pkgs.pkg-config];
@@ -33,6 +33,8 @@
         cargoBuildFlags = ["--example" "simple_pipeline"];
         installPhase = ''
           runHook preInstall
+          # buildRustPackage build phase may not build the example; build it here so it exists
+          cargo build --release --example simple_pipeline
           mkdir -p $out/bin
           cp target/release/examples/simple_pipeline $out/bin/streamweave-attractor
           runHook postInstall
