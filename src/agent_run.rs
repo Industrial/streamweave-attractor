@@ -8,7 +8,9 @@ use std::io::Write;
 use std::process::Command;
 
 /// Reads outcome.json from stage_dir. Returns context_updates if present.
-pub(crate) fn read_outcome_json(stage_dir: Option<&std::path::Path>) -> Option<HashMap<String, String>> {
+pub(crate) fn read_outcome_json(
+  stage_dir: Option<&std::path::Path>,
+) -> Option<HashMap<String, String>> {
   let base = stage_dir
     .map(std::path::PathBuf::from)
     .unwrap_or_else(|| std::path::PathBuf::from("."));
@@ -30,7 +32,11 @@ pub(crate) fn read_outcome_json(stage_dir: Option<&std::path::Path>) -> Option<H
 
 /// Runs the agent command with prompt as stdin; returns NodeOutcome based on exit code.
 /// Used by the compiled workflow and by CodergenNode.
-pub(crate) fn run_agent(agent_cmd: &str, prompt: &str, stage_dir: Option<&std::path::Path>) -> NodeOutcome {
+pub(crate) fn run_agent(
+  agent_cmd: &str,
+  prompt: &str,
+  stage_dir: Option<&std::path::Path>,
+) -> NodeOutcome {
   let parts: Vec<&str> = agent_cmd.split_whitespace().collect();
   let (bin, args) = match parts.split_first() {
     Some((b, a)) => (b, a),

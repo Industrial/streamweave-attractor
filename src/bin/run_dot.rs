@@ -61,7 +61,9 @@ async fn main() {
   let args = Args::parse();
 
   // Env vars override flags. These are the values used by the program (not read from env again).
-  let agent_cmd = env::var("ATTRACTOR_AGENT_CMD").ok().or_else(|| args.agent_cmd.clone());
+  let agent_cmd = env::var("ATTRACTOR_AGENT_CMD")
+    .ok()
+    .or_else(|| args.agent_cmd.clone());
   let stage_dir = env::var("ATTRACTOR_STAGE_DIR")
     .ok()
     .map(PathBuf::from)

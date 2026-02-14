@@ -5,10 +5,10 @@
 //! Phase 3: Direct port routing: success -> "out", error -> "error" (no router).
 //! Phase 4: Multiple edges to same (node, port) are merged via StreamWeave MergeNode.
 
-use std::path::Path;
 use crate::nodes::{CodergenNode, ExecNode, IdentityNode, validate_graph};
 use crate::types::AttractorGraph;
 use std::collections::HashMap;
+use std::path::Path;
 use streamweave::graph_builder::GraphBuilder;
 use streamweave::node::Node;
 use streamweave::nodes::stream::MergeNode;
