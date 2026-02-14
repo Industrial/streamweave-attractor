@@ -4,7 +4,7 @@
 //! - [run_compiled_graph]: compile AST then run, return [crate::nodes::execution_loop::AttractorResult].
 
 use crate::nodes::execution_loop::AttractorResult;
-use crate::execution_log_io::write_execution_log_partial;
+use crate::execution_log_io::{load_execution_log, resume_state_from_log, write_execution_log_partial};
 use crate::nodes::execution_loop::{RunLoopResult, run_execution_loop_once};
 use crate::nodes::init_context::{create_initial_state, create_initial_state_from_resume_state};
 use crate::types::{AttractorGraph, ExecutionLog, GraphPayload, NodeOutcome, ResumeState};
@@ -115,12 +115,46 @@ pub async fn run_compiled_graph(
   }
 
   if let Some(ref log_path) = options.execution_log_path {
-    let started_at = chrono::Utc::now().to_rfc3339();
-    let goal = ast.goal.clone();
-    let mut state = match &options.resume_state {
-      Some(st) => create_initial_state_from_resume_state(ast.clone(), st, Some(vec![])),
-      None => create_initial_state(ast.clone(), Some(vec![])),
+    let exit_id = ast
+      .find_exit()
+      .map(|n| n.id.clone())
+      .ok_or("missing exit node")?;
+
+    let (started_at, goal, mut state) = match load_execution_log(log_path) {
+      Ok(log) => {
+        if let Some(from_log) = resume_state_from_log(&log, Some(exit_id.as_str())) {
+          if from_log.already_completed {
+            return Ok(AttractorResult {
+              last_outcome: NodeOutcome::success("Exit"),
+              completed_nodes: from_log.resume_state.completed_nodes.clone(),
+              context: from_log.resume_state.context.clone(),
+              already_completed: true,
+            });
+          }
+          let resume_state = from_log.resume_state;
+          (
+            log.started_at.clone(),
+            log.goal.clone(),
+            create_initial_state_from_resume_state(ast.clone(), &resume_state, Some(log.steps)),
+          )
+        } else {
+          (
+            chrono::Utc::now().to_rfc3339(),
+            ast.goal.clone(),
+            create_initial_state(ast.clone(), Some(vec![])),
+          )
+        }
+      }
+      Err(_) => (
+        chrono::Utc::now().to_rfc3339(),
+        ast.goal.clone(),
+        match &options.resume_state {
+          Some(st) => create_initial_state_from_resume_state(ast.clone(), st, Some(vec![])),
+          None => create_initial_state(ast.clone(), Some(vec![])),
+        },
+      ),
     };
+
     let mut after_step = |st: &crate::types::ExecutionState| {
       let log = ExecutionLog {
         version: 1,
@@ -138,7 +172,7 @@ pub async fn run_compiled_graph(
         let steps = state.step_log.unwrap_or_default();
         write_execution_log(
           log_path,
-          &ast.goal,
+          &goal,
           &started_at,
           "success",
           &result.completed_nodes,
@@ -149,7 +183,7 @@ pub async fn run_compiled_graph(
       RunLoopResult::Err(e) => {
         let steps = state.step_log.unwrap_or_default();
         let completed = state.completed_nodes.clone();
-        write_execution_log(log_path, &ast.goal, &started_at, "error", &completed, steps)?;
+        write_execution_log(log_path, &goal, &started_at, "error", &completed, steps)?;
         return Err(e);
       }
     }

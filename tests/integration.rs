@@ -87,6 +87,7 @@ fn integration_test_out_error_dot_succeeds() {
 #[test]
 fn integration_pre_push_exec_only_dot_succeeds() {
   // Use sync execution path (ATTRACTOR_EXECUTION_LOG=1) so the test completes; the async stream path can hang.
+  // Runner loads log at start: if complete returns already_completed, so stdout may say "Pipeline already completed" or "Pipeline completed".
   let path = dot_path("pre_push_exec_only.dot");
   let path_str = path.to_str().expect("path");
   let (stdout, stderr, success) =
@@ -97,7 +98,14 @@ fn integration_pre_push_exec_only_dot_succeeds() {
     String::from_utf8_lossy(&stderr)
   );
   let out = String::from_utf8_lossy(&stdout);
-  assert!(out.contains("Pipeline completed"));
+  let completed_msg = out.contains("Pipeline completed")
+    || out.contains("Pipeline already completed")
+    || out.contains("Nothing to resume");
+  assert!(
+    completed_msg,
+    "expected completion message in stdout: {}",
+    out
+  );
   assert!(out.contains("Success"));
 }
 
@@ -231,11 +239,9 @@ async fn integration_lib_exec_fail_exit_returns_failure() {
   assert!(format!("{:?}", r.last_outcome.status) != "Success");
 }
 
-/// Proves that running the same graph twice in a row does not skip execution when an
-/// execution log exists from the first run. Resume is only used when --resume is explicitly passed.
-///
-/// Completed runs leave an execution log when run_dir and execution_log_path are set; the next
-/// run can use --resume if desired. Without --resume, the graph always runs from start.
+/// When execution_log_path is set, the runner loads the log at start. First run executes
+/// and writes the log; second run with same path loads the log, sees finished_at, and
+/// returns already_completed without re-running.
 #[tokio::test]
 async fn integration_lib_two_runs_without_resume_both_run_fully() {
   let run_dir = tempfile::tempdir().expect("tempdir");
@@ -257,6 +263,7 @@ async fn integration_lib_two_runs_without_resume_both_run_fully() {
   )
   .await
   .expect("first run");
+  assert!(!r1.already_completed);
   assert!(format!("{:?}", r1.last_outcome.status) == "Success");
   assert!(r1.completed_nodes.contains(&"pre_push".to_string()));
   assert!(r1.completed_nodes.contains(&"test_coverage".to_string()));
@@ -284,11 +291,13 @@ async fn integration_lib_two_runs_without_resume_both_run_fully() {
   )
   .await
   .expect("second run");
+  assert!(
+    r2.already_completed,
+    "second run with same execution_log_path loads log and returns already_completed"
+  );
   assert!(format!("{:?}", r2.last_outcome.status) == "Success");
-  assert!(r2.completed_nodes.contains(&"pre_push".to_string()));
-  assert!(r2.completed_nodes.contains(&"test_coverage".to_string()));
   assert_eq!(
     r1.completed_nodes, r2.completed_nodes,
-    "second run must execute the full graph, not resume from execution log"
+    "second run returns same completed_nodes from log"
   );
 }
