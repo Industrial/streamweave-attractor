@@ -88,6 +88,7 @@ async fn node_execute_err_node_not_found() {
     current_node_id: "nonexistent".to_string(),
     completed_nodes: vec![],
     node_outcomes: HashMap::new(),
+    step_log: None,
   };
   let node = AttractorExecutionLoopNode::new("exec");
   let (tx, rx) = tokio::sync::mpsc::channel(4);
@@ -156,6 +157,7 @@ fn run_execution_loop_once_returns_ok_for_simple_pipeline() {
     current_node_id: "start".to_string(),
     completed_nodes: vec![],
     node_outcomes: HashMap::new(),
+    step_log: None,
   };
   match run_execution_loop_once(&mut state) {
     RunLoopResult::Ok(r) => {
@@ -195,9 +197,43 @@ fn run_execution_loop_once_returns_err_when_node_not_found() {
     current_node_id: "nonexistent".to_string(),
     completed_nodes: vec![],
     node_outcomes: HashMap::new(),
+    step_log: None,
   };
   match run_execution_loop_once(&mut state) {
     RunLoopResult::Err(e) => assert!(e.contains("Node not found")),
     RunLoopResult::Ok(_) => panic!("expected Err"),
   }
+}
+
+#[test]
+fn run_execution_loop_once_records_steps_when_step_log_is_some() {
+  let dot = r#"digraph G { start [shape=Mdiamond] exit [shape=Msquare] start -> exit }"#;
+  let graph = crate::dot_parser::parse_dot(dot).unwrap();
+  let mut context = HashMap::new();
+  context.insert("goal".to_string(), graph.goal.clone());
+  let step_log = Some(Vec::new());
+  let mut state = ExecutionState {
+    graph: graph.clone(),
+    context,
+    current_node_id: "start".to_string(),
+    completed_nodes: vec![],
+    node_outcomes: HashMap::new(),
+    step_log: step_log.clone(),
+  };
+  match run_execution_loop_once(&mut state) {
+    RunLoopResult::Ok(r) => {
+      assert_eq!(r.completed_nodes, vec!["start", "exit"]);
+    }
+    RunLoopResult::Err(e) => panic!("expected Ok, got Err: {}", e),
+  }
+  let log = state.step_log.unwrap();
+  assert_eq!(log.len(), 2, "expected two steps (start, exit)");
+  assert_eq!(log[0].step, 1);
+  assert_eq!(log[0].node_id, "start");
+  assert_eq!(log[0].next_node_id.as_deref(), Some("exit"));
+  assert_eq!(log[0].completed_nodes_after, vec!["start"]);
+  assert_eq!(log[1].step, 2);
+  assert_eq!(log[1].node_id, "exit");
+  assert_eq!(log[1].next_node_id, None);
+  assert_eq!(log[1].completed_nodes_after, vec!["start", "exit"]);
 }

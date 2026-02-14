@@ -2,7 +2,7 @@
 
 use crate::nodes::execute_handler::{ExecuteHandlerInput, execute_handler};
 use crate::nodes::select_edge::{SelectEdgeInput, select_edge};
-use crate::types::{ExecutionState, NodeOutcome};
+use crate::types::{ExecutionState, ExecutionStepEntry, NodeOutcome};
 use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
@@ -64,6 +64,7 @@ pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResu
       }
     };
 
+    let context_before = state.context.clone();
     let handler_input = ExecuteHandlerInput {
       node: node.clone(),
       context: state.context.clone(),
@@ -75,6 +76,8 @@ pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResu
     state
       .node_outcomes
       .insert(state.current_node_id.clone(), last_outcome.clone());
+    let context_after = state.context.clone();
+    let completed_nodes_after = state.completed_nodes.clone();
 
     let sel_input = SelectEdgeInput {
       node_id: state.current_node_id.clone(),
@@ -83,6 +86,21 @@ pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResu
       graph: state.graph.clone(),
     };
     let sel_out = select_edge(&sel_input);
+    let next_node_id = sel_out.next_node_id.clone();
+
+    if let Some(ref mut log) = state.step_log {
+      let step = (log.len() + 1) as u32;
+      log.push(ExecutionStepEntry::new(
+        step,
+        state.current_node_id.clone(),
+        node.handler_type.clone(),
+        context_before,
+        last_outcome.clone(),
+        context_after,
+        next_node_id.clone(),
+        completed_nodes_after,
+      ));
+    }
 
     match sel_out.next_node_id {
       Some(next_id) => {

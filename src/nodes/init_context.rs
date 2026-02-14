@@ -45,6 +45,7 @@ pub(crate) fn create_initial_state(graph: AttractorGraph) -> ExecutionState {
     current_node_id: start_id,
     completed_nodes: vec![],
     node_outcomes: HashMap::new(),
+    step_log: None,
   }
 }
 

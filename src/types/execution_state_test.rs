@@ -37,6 +37,7 @@ fn is_done_when_at_exit() {
     current_node_id: "exit".to_string(),
     completed_nodes: vec![],
     node_outcomes: HashMap::new(),
+    step_log: None,
   };
   assert!(state.is_done());
 }
@@ -54,6 +55,7 @@ fn is_done_false_when_at_non_exit() {
     current_node_id: "mid".to_string(),
     completed_nodes: vec![],
     node_outcomes: HashMap::new(),
+    step_log: None,
   };
   assert!(!state.is_done());
 }
@@ -67,6 +69,7 @@ fn is_done_false_when_unknown_node() {
     current_node_id: "nonexistent".to_string(),
     completed_nodes: vec![],
     node_outcomes: HashMap::new(),
+    step_log: None,
   };
   assert!(!state.is_done());
 }
