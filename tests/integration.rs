@@ -225,3 +225,53 @@ async fn integration_lib_exec_fail_exit_returns_failure() {
   .expect("run_compiled_graph");
   assert!(format!("{:?}", r.last_outcome.status) != "Success");
 }
+
+/// Proves that running the same graph twice in a row does not skip execution when a checkpoint
+/// exists from the first run. Checkpoint is only used when --resume is explicitly passed.
+///
+/// Completed runs do leave a checkpoint when run_dir is set; that is intentional so the next
+/// run can use --resume if desired. Without --resume, the graph always runs from start.
+#[tokio::test]
+async fn integration_lib_two_runs_without_resume_both_run_fully() {
+  let run_dir = tempfile::tempdir().expect("tempdir");
+  let run_path = run_dir.path();
+  let log_path = run_path.join("exec.log.json");
+  let dot = std::fs::read_to_string(dot_path("pre_push_exec_only.dot")).expect("read");
+  let ast = streamweave_attractor::dot_parser::parse_dot(&dot).expect("parse");
+
+  let r1 = streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: Some(run_path),
+      resume_checkpoint: None,
+      agent_cmd: None,
+      stage_dir: None,
+      execution_log_path: Some(log_path.clone()),
+    },
+  )
+    .await
+    .expect("first run");
+  assert!(format!("{:?}", r1.last_outcome.status) == "Success");
+  assert!(r1.completed_nodes.contains(&"pre_push".to_string()));
+  assert!(r1.completed_nodes.contains(&"test_coverage".to_string()));
+
+  let checkpoint_file = run_path.join(streamweave_attractor::checkpoint_io::CHECKPOINT_FILENAME);
+  assert!(checkpoint_file.exists(), "first run must leave a checkpoint when run_dir is set");
+
+  let r2 = streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: Some(run_path),
+      resume_checkpoint: None,
+      agent_cmd: None,
+      stage_dir: None,
+      execution_log_path: Some(log_path.clone()),
+    },
+  )
+    .await
+    .expect("second run");
+  assert!(format!("{:?}", r2.last_outcome.status) == "Success");
+  assert!(r2.completed_nodes.contains(&"pre_push".to_string()));
+  assert!(r2.completed_nodes.contains(&"test_coverage".to_string()));
+  assert_eq!(r1.completed_nodes, r2.completed_nodes, "second run must execute the full graph, not resume from checkpoint");
+}
