@@ -131,30 +131,32 @@ async fn main() {
     }
   };
 
-  let resume_checkpoint = args.resume.as_ref().and_then(|dir| {
-    let log_path = dir.join(execution_log_io::EXECUTION_LOG_FILENAME);
-    if log_path.exists() {
-      if let Ok(log) = execution_log_io::load_execution_log(&log_path) {
-        let exit_id = ast.find_exit().map(|n| n.id.as_str());
-        if let Some(r) = execution_log_io::resume_state_from_log(&log, exit_id) {
-          return Some(r.checkpoint);
+  let (resume_checkpoint, resume_already_completed) =
+    args.resume.as_ref().map_or((None, false), |dir| {
+      let log_path = dir.join(execution_log_io::EXECUTION_LOG_FILENAME);
+      if log_path.exists() {
+        if let Ok(log) = execution_log_io::load_execution_log(&log_path) {
+          let exit_id = ast.find_exit().map(|n| n.id.as_str());
+          if let Some(r) = execution_log_io::resume_state_from_log(&log, exit_id) {
+            return (Some(r.checkpoint), r.already_completed);
+          }
         }
       }
-    }
-    // Backward compat: resume from checkpoint.json when no execution log exists.
-    let cp_path = dir.join(checkpoint_io::CHECKPOINT_FILENAME);
-    match checkpoint_io::load_checkpoint(&cp_path) {
-      Ok(cp) => Some(cp),
-      Err(e) => {
-        eprintln!("Error loading checkpoint from {}: {}", cp_path.display(), e);
-        process::exit(1);
+      // Backward compat: resume from checkpoint.json when no execution log exists.
+      let cp_path = dir.join(checkpoint_io::CHECKPOINT_FILENAME);
+      match checkpoint_io::load_checkpoint(&cp_path) {
+        Ok(cp) => (Some(cp), false),
+        Err(e) => {
+          eprintln!("Error loading checkpoint from {}: {}", cp_path.display(), e);
+          process::exit(1);
+        }
       }
-    }
-  });
+    });
 
   let options = RunOptions {
     run_dir: run_dir_for_options,
     resume_checkpoint,
+    resume_already_completed,
     agent_cmd,
     stage_dir: Some(stage_dir),
     execution_log_path,

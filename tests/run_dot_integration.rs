@@ -302,6 +302,7 @@ async fn execution_log_path_writes_execution_log_json() {
     streamweave_attractor::RunOptions {
       run_dir: None,
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: Some(log_path.clone()),
@@ -346,6 +347,7 @@ async fn pre_push_dot_via_run_compiled_graph() {
     streamweave_attractor::RunOptions {
       run_dir: None,
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -383,6 +385,7 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
     streamweave_attractor::RunOptions {
       run_dir: None,
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -402,9 +405,9 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
   );
 }
 
-/// Run pipeline with run_dir and execution_log_path and verify execution log is written.
+/// Run pipeline with run_dir and execution_log_path; assert execution.log.json is written with expected content.
 #[tokio::test]
-async fn run_dir_writes_checkpoint() {
+async fn run_dir_writes_execution_log() {
   let dot = r#"
     digraph G {
       graph [goal="resume-test"]
@@ -415,13 +418,16 @@ async fn run_dir_writes_checkpoint() {
   "#;
   let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
   let run_dir = tempfile::tempdir().expect("temp dir");
-  let log_path = run_dir.path().join("execution.log.json");
+  let log_path = run_dir
+    .path()
+    .join(streamweave_attractor::execution_log_io::EXECUTION_LOG_FILENAME);
 
   streamweave_attractor::run_compiled_graph(
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: Some(log_path.clone()),
@@ -436,8 +442,20 @@ async fn run_dir_writes_checkpoint() {
   );
   let log =
     streamweave_attractor::execution_log_io::load_execution_log(&log_path).expect("load log");
+  assert_eq!(log.version, 1);
   assert_eq!(log.goal, "resume-test");
-  assert!(!log.completed_nodes.is_empty() || !log.steps.is_empty());
+  assert!(
+    log.finished_at.is_some(),
+    "completed run should have finished_at set"
+  );
+  assert!(
+    !log.steps.is_empty(),
+    "execution log should have at least one step"
+  );
+  assert!(
+    !log.completed_nodes.is_empty(),
+    "completed run should have completed_nodes"
+  );
 }
 
 /// Run pipeline with run_dir and execution log, then resume from that log and assert completion.
@@ -453,7 +471,9 @@ async fn resume_from_checkpoint_completes() {
   "#;
   let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
   let run_dir = tempfile::tempdir().expect("temp dir");
-  let log_path = run_dir.path().join("execution.log.json");
+  let log_path = run_dir
+    .path()
+    .join(streamweave_attractor::execution_log_io::EXECUTION_LOG_FILENAME);
 
   // First run: write execution log
   streamweave_attractor::run_compiled_graph(
@@ -461,6 +481,7 @@ async fn resume_from_checkpoint_completes() {
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: Some(log_path.clone()),
@@ -481,6 +502,7 @@ async fn resume_from_checkpoint_completes() {
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
       resume_checkpoint: Some(resume.checkpoint),
+      resume_already_completed: resume.already_completed,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: Some(log_path),
@@ -493,6 +515,141 @@ async fn resume_from_checkpoint_completes() {
     result.completed_nodes.contains(&"exit".to_string()),
     "resume should complete through exit; completed: {:?}",
     result.completed_nodes
+  );
+}
+
+/// Resume from a partial execution log (no finished_at): run continues and completes.
+#[tokio::test]
+async fn resume_from_partial_log() {
+  use std::collections::HashMap;
+
+  let dot = r#"
+    digraph G {
+      graph [goal="partial-resume"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      start -> exit
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let run_dir = tempfile::tempdir().expect("temp dir");
+  let log_path = run_dir
+    .path()
+    .join(streamweave_attractor::execution_log_io::EXECUTION_LOG_FILENAME);
+
+  let mut ctx: HashMap<String, String> = HashMap::new();
+  ctx.insert("goal".to_string(), "partial-resume".to_string());
+  let step = streamweave_attractor::types::ExecutionStepEntry::new(
+    1,
+    "start",
+    Some("start".to_string()),
+    HashMap::new(),
+    streamweave_attractor::types::NodeOutcome::success("ok"),
+    ctx.clone(),
+    Some("exit".to_string()),
+    vec!["start".to_string()],
+  );
+  let partial_log = streamweave_attractor::types::ExecutionLog {
+    version: 1,
+    goal: "partial-resume".to_string(),
+    started_at: "2026-02-14T10:00:00Z".to_string(),
+    finished_at: None,
+    final_status: String::new(),
+    completed_nodes: vec!["start".to_string()],
+    steps: vec![step],
+  };
+  streamweave_attractor::execution_log_io::write_execution_log_partial(&log_path, &partial_log)
+    .expect("write partial log");
+
+  let log =
+    streamweave_attractor::execution_log_io::load_execution_log(&log_path).expect("load log");
+  let exit_id = ast.find_exit().map(|n| n.id.as_str());
+  let resume = streamweave_attractor::execution_log_io::resume_state_from_log(&log, exit_id)
+    .expect("resume state from partial log");
+  assert!(
+    !resume.already_completed,
+    "partial log should not be already_completed"
+  );
+
+  let result = streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: Some(run_dir.path()),
+      resume_checkpoint: Some(resume.checkpoint),
+      resume_already_completed: resume.already_completed,
+      agent_cmd: None,
+      stage_dir: None,
+      execution_log_path: Some(log_path),
+    },
+  )
+  .await
+  .expect("resume from partial log");
+
+  assert!(
+    result.completed_nodes.contains(&"exit".to_string()),
+    "resume from partial log should complete through exit; completed: {:?}",
+    result.completed_nodes
+  );
+}
+
+/// Resume from a completed execution log (finished_at set): run_compiled_graph returns already_completed.
+#[tokio::test]
+async fn resume_from_completed_log_returns_already_completed() {
+  let dot = r#"
+    digraph G {
+      graph [goal="already-done"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      start -> exit
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let run_dir = tempfile::tempdir().expect("temp dir");
+  let log_path = run_dir
+    .path()
+    .join(streamweave_attractor::execution_log_io::EXECUTION_LOG_FILENAME);
+
+  streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: Some(run_dir.path()),
+      resume_checkpoint: None,
+      resume_already_completed: false,
+      agent_cmd: None,
+      stage_dir: None,
+      execution_log_path: Some(log_path.clone()),
+    },
+  )
+  .await
+  .expect("first run");
+
+  let log =
+    streamweave_attractor::execution_log_io::load_execution_log(&log_path).expect("load log");
+  let exit_id = ast.find_exit().map(|n| n.id.as_str());
+  let resume = streamweave_attractor::execution_log_io::resume_state_from_log(&log, exit_id)
+    .expect("resume state from completed log");
+  assert!(
+    resume.already_completed,
+    "completed log should have already_completed true"
+  );
+
+  let result = streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: Some(run_dir.path()),
+      resume_checkpoint: Some(resume.checkpoint),
+      resume_already_completed: resume.already_completed,
+      agent_cmd: None,
+      stage_dir: None,
+      execution_log_path: Some(log_path),
+    },
+  )
+  .await
+  .expect("second run with completed checkpoint");
+
+  assert!(
+    result.already_completed,
+    "resume from completed log should return already_completed true"
   );
 }
 
@@ -533,6 +690,7 @@ async fn tdd_codergen_error_path_graph_completes_within_timeout() {
       streamweave_attractor::RunOptions {
         run_dir: None,
         resume_checkpoint: None,
+        resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: None,
@@ -576,6 +734,7 @@ async fn tdd_codergen_success_path_graph_completes_within_timeout() {
       streamweave_attractor::RunOptions {
         run_dir: None,
         resume_checkpoint: None,
+        resume_already_completed: false,
         agent_cmd: Some("true".to_string()),
         stage_dir: None,
         execution_log_path: None,
@@ -620,6 +779,7 @@ async fn tdd_exec_error_path_graph_completes_within_timeout() {
       streamweave_attractor::RunOptions {
         run_dir: None,
         resume_checkpoint: None,
+        resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: None,
@@ -663,6 +823,7 @@ async fn tdd_cyclic_exec_error_path_graph_completes_within_timeout() {
       streamweave_attractor::RunOptions {
         run_dir: None,
         resume_checkpoint: None,
+        resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: None,
@@ -699,6 +860,7 @@ async fn tdd_exec_success_path_graph_completes_within_timeout() {
       streamweave_attractor::RunOptions {
         run_dir: None,
         resume_checkpoint: None,
+        resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: None,
@@ -741,6 +903,7 @@ async fn tdd_cyclic_codergen_error_path_graph_completes_within_timeout() {
       streamweave_attractor::RunOptions {
         run_dir: None,
         resume_checkpoint: None,
+        resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: None,

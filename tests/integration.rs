@@ -124,6 +124,7 @@ async fn integration_lib_minimal_succeeds() {
     streamweave_attractor::RunOptions {
       run_dir: None,
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -148,6 +149,7 @@ async fn integration_lib_test_success_only_succeeds() {
     streamweave_attractor::RunOptions {
       run_dir: None,
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -168,6 +170,7 @@ async fn integration_lib_test_out_error_succeeds() {
     streamweave_attractor::RunOptions {
       run_dir: None,
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -193,6 +196,7 @@ async fn integration_lib_pre_push_exec_only_succeeds() {
       streamweave_attractor::RunOptions {
         run_dir: None,
         resume_checkpoint: None,
+        resume_already_completed: false,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: Some(log_path),
@@ -216,6 +220,7 @@ async fn integration_lib_exec_fail_exit_returns_failure() {
     streamweave_attractor::RunOptions {
       run_dir: None,
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -244,6 +249,7 @@ async fn integration_lib_two_runs_without_resume_both_run_fully() {
     streamweave_attractor::RunOptions {
       run_dir: Some(run_path),
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: Some(log_path.clone()),
@@ -270,6 +276,7 @@ async fn integration_lib_two_runs_without_resume_both_run_fully() {
     streamweave_attractor::RunOptions {
       run_dir: Some(run_path),
       resume_checkpoint: None,
+      resume_already_completed: false,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: Some(log_path.clone()),

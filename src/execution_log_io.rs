@@ -83,8 +83,7 @@ pub fn resume_state_from_log(
 #[cfg(test)]
 mod tests {
   use super::{
-    load_execution_log, resume_state_from_log, write_execution_log_partial,
-    EXECUTION_LOG_FILENAME,
+    EXECUTION_LOG_FILENAME, load_execution_log, resume_state_from_log, write_execution_log_partial,
   };
   use crate::types::{ExecutionLog, ExecutionStepEntry, NodeOutcome};
   use std::collections::HashMap;

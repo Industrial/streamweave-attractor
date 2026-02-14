@@ -55,6 +55,8 @@ pub struct RunOptions<'a> {
   pub run_dir: Option<&'a Path>,
   /// If set, run resumes from this checkpoint (entry node and initial payload from checkpoint).
   pub resume_checkpoint: Option<Checkpoint>,
+  /// When true and [resume_checkpoint] is set, skip running and return already_completed (e.g. from execution log with finished_at).
+  pub resume_already_completed: bool,
   /// Command for agent/codergen nodes (e.g. cursor-agent). Required if the graph has codergen nodes.
   pub agent_cmd: Option<String>,
   /// Directory for agent outcome.json and staging.
@@ -100,7 +102,8 @@ pub async fn run_compiled_graph(
       .find_exit()
       .map(|n| n.id.clone())
       .ok_or("missing exit node")?;
-    if cp.current_node_id == exit_id {
+    let at_exit = cp.current_node_id == exit_id;
+    if options.resume_already_completed || (at_exit && options.execution_log_path.is_none()) {
       return Ok(AttractorResult {
         last_outcome: NodeOutcome::success("Exit"),
         completed_nodes: cp.completed_nodes.clone(),
