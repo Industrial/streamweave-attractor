@@ -36,17 +36,10 @@ pub async fn run_streamweave_graph(
 
   graph.execute().await.map_err(|e| e.to_string())?;
   let first = rx_out.recv().await;
-  // When resuming at a node other than start, only that node receives input; the rest never
-  // get data and would block forever. Once we have the result, dropping the graph closes
-  // channels so node tasks can exit. If we got no result, still wait for completion.
-  if first.is_some() {
-    drop(graph);
-  } else {
-    graph
-      .wait_for_completion()
-      .await
-      .map_err(|e| e.to_string())?;
-  }
+  graph
+    .wait_for_completion()
+    .await
+    .map_err(|e| e.to_string())?;
   Ok(first)
 }
 
@@ -54,8 +47,6 @@ pub async fn run_streamweave_graph(
 pub struct RunOptions<'a> {
   /// If set, checkpoint is written here at successful exit (to `run_dir/checkpoint.json`).
   pub run_dir: Option<&'a Path>,
-  /// If set, resume from this checkpoint (entry node and initial payload from checkpoint).
-  pub resume_checkpoint: Option<&'a Checkpoint>,
   /// Command for agent/codergen nodes (e.g. cursor-agent). Required if the graph has codergen nodes.
   pub agent_cmd: Option<String>,
   /// Directory for agent outcome.json and staging.
@@ -63,34 +54,26 @@ pub struct RunOptions<'a> {
 }
 
 /// Compiles the Attractor graph to a StreamWeave graph, runs it, and returns an [AttractorResult].
-/// Uses [crate::compile_attractor_graph]. Initial context includes the graph goal unless resuming.
+/// Uses [crate::compile_attractor_graph]. Initial context includes the graph goal.
 pub async fn run_compiled_graph(
   ast: &AttractorGraph,
   options: RunOptions<'_>,
 ) -> Result<AttractorResult, String> {
-  let entry_node_id = options
-    .resume_checkpoint
-    .map(|cp| cp.current_node_id.as_str());
   let mut graph = crate::compiler::compile_attractor_graph(
     ast,
-    entry_node_id,
+    None,
     options.agent_cmd.as_deref(),
     options.stage_dir.as_deref(),
   )?;
 
-  let initial = match options.resume_checkpoint {
-    Some(cp) => GraphPayload::from_checkpoint(cp),
-    None => {
-      let mut ctx = std::collections::HashMap::new();
-      ctx.insert("goal".to_string(), ast.goal.clone());
-      ctx.insert("graph.goal".to_string(), ast.goal.clone());
-      let start_id = ast
-        .find_start()
-        .map(|n| n.id.clone())
-        .ok_or("missing start node")?;
-      GraphPayload::initial(ctx, start_id)
-    }
-  };
+  let mut ctx = std::collections::HashMap::new();
+  ctx.insert("goal".to_string(), ast.goal.clone());
+  ctx.insert("graph.goal".to_string(), ast.goal.clone());
+  let start_id = ast
+    .find_start()
+    .map(|n| n.id.clone())
+    .ok_or("missing start node")?;
+  let initial = GraphPayload::initial(ctx, start_id);
 
   let (tx_in, rx_in) = tokio::sync::mpsc::channel(1);
   let (_tx_out, mut rx_out) = tokio::sync::mpsc::channel(16);
@@ -110,14 +93,10 @@ pub async fn run_compiled_graph(
 
   graph.execute().await.map_err(|e| e.to_string())?;
   let first = rx_out.recv().await;
-  if first.is_some() {
-    drop(graph);
-  } else {
-    graph
-      .wait_for_completion()
-      .await
-      .map_err(|e| e.to_string())?;
-  }
+  graph
+    .wait_for_completion()
+    .await
+    .map_err(|e| e.to_string())?;
 
   let payload = first
     .and_then(|arc| arc.downcast::<GraphPayload>().ok())

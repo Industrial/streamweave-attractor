@@ -88,7 +88,6 @@ async fn pre_push_dot_via_run_compiled_graph() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
-      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
     },
@@ -124,7 +123,6 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
-      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
     },
@@ -143,9 +141,9 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
   );
 }
 
-/// Run pipeline with --run-dir, then resume from that checkpoint via library.
+/// Run pipeline with run_dir and verify checkpoint is written.
 #[tokio::test]
-async fn run_dir_writes_checkpoint_resume_completes() {
+async fn run_dir_writes_checkpoint() {
   let dot = r#"
     digraph G {
       graph [goal="resume-test"]
@@ -161,7 +159,6 @@ async fn run_dir_writes_checkpoint_resume_completes() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
-      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
     },
@@ -181,20 +178,4 @@ async fn run_dir_writes_checkpoint_resume_completes() {
     Some("resume-test")
   );
   assert!(!cp.completed_nodes.is_empty() || !cp.current_node_id.is_empty());
-
-  let resumed = streamweave_attractor::run_compiled_graph(
-    &ast,
-    streamweave_attractor::RunOptions {
-      run_dir: None,
-      resume_checkpoint: Some(&cp),
-      agent_cmd: None,
-      stage_dir: None,
-    },
-  )
-  .await
-  .expect("run_compiled_graph resume");
-  assert!(
-    format!("{:?}", resumed.last_outcome.status) == "Success",
-    "resumed run should complete successfully"
-  );
 }

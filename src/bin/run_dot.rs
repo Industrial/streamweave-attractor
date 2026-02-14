@@ -6,7 +6,7 @@
 //! Usage: `run_dot [OPTIONS] <path-to-dot-file>`
 //! Example: run_dot examples/workflows/pre-push.dot
 //!
-//! Checkpoint is written to .attractor/checkpoint.json on success; resume is automatic from that file when present.
+//! Checkpoint is written to .attractor/checkpoint.json on success.
 //!
 //! Set RUST_LOG=streamweave_attractor=trace for TRACE-level span enter/exit and events.
 
@@ -15,7 +15,6 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process;
-use streamweave_attractor::checkpoint_io::{self, CHECKPOINT_FILENAME};
 use streamweave_attractor::{RunOptions, dot_parser, run_compiled_graph};
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
@@ -69,9 +68,8 @@ async fn main() {
     .or_else(|| Some(args.stage_dir.clone()))
     .unwrap_or_else(|| PathBuf::from(RUN_DIR));
   let run_dir = PathBuf::from(RUN_DIR);
-  let resume_checkpoint = checkpoint_io::load_checkpoint(&run_dir.join(CHECKPOINT_FILENAME)).ok();
 
-  info!(agent_cmd = ?agent_cmd, stage_dir = %stage_dir.display(), run_dir = %run_dir.display(), resume = resume_checkpoint.is_some(), "options (env or flags)");
+  info!(agent_cmd = ?agent_cmd, stage_dir = %stage_dir.display(), run_dir = %run_dir.display(), "options (env or flags)");
 
   let path = &args.dot_path;
   let dot = match fs::read_to_string(path) {
@@ -92,7 +90,6 @@ async fn main() {
 
   let options = RunOptions {
     run_dir: Some(run_dir.as_path()),
-    resume_checkpoint: resume_checkpoint.as_ref(),
     agent_cmd,
     stage_dir: Some(stage_dir),
   };

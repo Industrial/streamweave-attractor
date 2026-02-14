@@ -34,8 +34,8 @@ fn condition_is_outcome_error(cond: Option<&str>) -> bool {
 /// - Exec nodes: ExecNode with command (rejects exec without command per design §2.2)
 /// - Codergen/other: CodergenNode (invokes ATTRACTOR_AGENT_CMD with prompt)
 ///
-/// When `entry_node_id` is `Some(id)`, the graph input is connected to that node (for resume).
-/// When `None`, the graph input is connected to the start node.
+/// When `entry_node_id` is `Some(id)`, the graph input is connected to that node;
+/// when `None`, to the start node.
 #[instrument(level = "trace", skip(ast))]
 pub fn compile_attractor_graph(
   ast: &AttractorGraph,

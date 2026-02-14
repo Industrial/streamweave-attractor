@@ -1,9 +1,9 @@
 //! Payload type that flows through the compiled StreamWeave graph.
 //! Carries RunContext and the latest NodeOutcome so context flows start→nodes→exit
 //! and context_updates from outcomes are applied along the path.
-//! Tracks current_node_id and completed_nodes for checkpoint/resume.
+//! Tracks current_node_id and completed_nodes for checkpoint.
 
-use super::{Checkpoint, NodeOutcome, RunContext};
+use super::{NodeOutcome, RunContext};
 
 /// Payload flowing through the compiled graph: context plus optional last outcome.
 /// Nodes that produce outcomes (Exec, Codergen) merge outcome.context_updates into context.
@@ -40,16 +40,6 @@ impl GraphPayload {
       outcome: None,
       current_node_id: start.clone(),
       completed_nodes: vec![],
-    }
-  }
-
-  /// Initial payload when resuming from a checkpoint.
-  pub fn from_checkpoint(cp: &Checkpoint) -> Self {
-    Self {
-      context: cp.context.clone(),
-      outcome: None,
-      current_node_id: cp.current_node_id.clone(),
-      completed_nodes: cp.completed_nodes.clone(),
     }
   }
 
