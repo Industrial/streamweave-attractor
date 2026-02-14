@@ -21,6 +21,8 @@ pub struct AttractorResult {
   pub completed_nodes: Vec<String>,
   /// Final run context after the pipeline completes.
   pub context: HashMap<String, String>,
+  /// True when --resume was used and the checkpoint was already at exit (no work done).
+  pub already_completed: bool,
 }
 
 /// Merges outcome context_updates and status/preferred_label into the given context.
@@ -115,6 +117,7 @@ pub(crate) fn run_execution_loop_once(state: &mut ExecutionState) -> RunLoopResu
           last_outcome: last_outcome.clone(),
           completed_nodes: state.completed_nodes.clone(),
           context: state.context.clone(),
+          already_completed: false,
         });
       }
     }

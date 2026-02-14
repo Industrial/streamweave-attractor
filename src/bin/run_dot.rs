@@ -159,7 +159,11 @@ async fn main() {
   };
 
   info!(status = ?r.last_outcome.status, nodes = ?r.completed_nodes, "pipeline completed");
-  println!("Pipeline completed.");
+  if r.already_completed {
+    println!("Pipeline already completed (checkpoint at exit). Nothing to resume.");
+  } else {
+    println!("Pipeline completed.");
+  }
   println!("  Status: {:?}", r.last_outcome.status);
   println!("  Notes: {:?}", r.last_outcome.notes);
   println!("  Completed nodes: {:?}", r.completed_nodes);

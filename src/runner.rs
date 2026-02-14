@@ -96,6 +96,21 @@ pub async fn run_compiled_graph(
   ast: &AttractorGraph,
   options: RunOptions<'_>,
 ) -> Result<AttractorResult, String> {
+  if let Some(ref cp) = options.resume_checkpoint {
+    let exit_id = ast
+      .find_exit()
+      .map(|n| n.id.clone())
+      .ok_or("missing exit node")?;
+    if cp.current_node_id == exit_id {
+      return Ok(AttractorResult {
+        last_outcome: NodeOutcome::success("Exit"),
+        completed_nodes: cp.completed_nodes.clone(),
+        context: cp.context.clone(),
+        already_completed: true,
+      });
+    }
+  }
+
   if let Some(ref log_path) = options.execution_log_path {
     let started_at = chrono::Utc::now().to_rfc3339();
     let mut state = match &options.resume_checkpoint {
@@ -231,5 +246,6 @@ pub async fn run_compiled_graph(
     last_outcome,
     completed_nodes,
     context,
+    already_completed: false,
   })
 }
