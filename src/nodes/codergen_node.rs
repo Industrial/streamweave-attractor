@@ -121,16 +121,18 @@ impl Node for CodergenNode {
           completed.push(name.clone());
           let payload = GraphPayload::new(updated, Some(outcome), name.clone(), completed);
           let arc = Arc::new(payload) as Arc<dyn Any + Send + Sync>;
-          // Drop unused sender immediately so its stream ends; prevents merge nodes from
-          // waiting forever when we take one branch (e.g. success) but the other (error)
-          // feeds a merge (e.g. fix_X -> merge -> same node).
+          // Drop both senders after sending on one: unused so that branch's stream ends,
+          // and used so the downstream sees stream close and wait_for_completion() can finish.
+          
           if is_success {
             tracing::info!(node = %name, "finished: success");
             let _ = out_tx.send(arc).await;
             drop(err_tx);
+            drop(out_tx);
           } else {
             tracing::info!(node = %name, "finished: error");
             let _ = err_tx.send(arc).await;
+            drop(err_tx);
             drop(out_tx);
           }
         }

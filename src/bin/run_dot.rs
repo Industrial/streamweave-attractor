@@ -15,11 +15,10 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process;
-use streamweave_attractor::{RunOptions, dot_parser, run_compiled_graph};
+use streamweave_attractor::{RunOptions, dot_parser, run_compiled_graph, DEFAULT_STAGE_DIR};
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
-const RUN_DIR: &str = ".attractor";
 
 /// Run an Attractor pipeline from a .dot file.
 ///
@@ -42,7 +41,7 @@ struct Args {
   agent_cmd: Option<String>,
 
   /// Directory for outcome.json and staging. Overridden by ATTRACTOR_STAGE_DIR if set. Default: .attractor
-  #[arg(long, value_name = "DIR", default_value = RUN_DIR)]
+  #[arg(long, value_name = "DIR", default_value = DEFAULT_STAGE_DIR)]
   stage_dir: PathBuf,
 
   /// Path to the .dot workflow file
@@ -68,8 +67,8 @@ async fn main() {
     .ok()
     .map(PathBuf::from)
     .or_else(|| Some(args.stage_dir.clone()))
-    .unwrap_or_else(|| PathBuf::from(RUN_DIR));
-  let run_dir = PathBuf::from(RUN_DIR);
+    .unwrap_or_else(|| PathBuf::from(DEFAULT_STAGE_DIR));
+  let run_dir = PathBuf::from(DEFAULT_STAGE_DIR);
 
   info!(agent_cmd = ?agent_cmd, stage_dir = %stage_dir.display(), run_dir = %run_dir.display(), "options (env or flags)");
 

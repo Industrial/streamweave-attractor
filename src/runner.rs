@@ -59,13 +59,16 @@ pub async fn run_compiled_graph(
   ast: &AttractorGraph,
   options: RunOptions<'_>,
 ) -> Result<AttractorResult, String> {
+  let stage_dir = options
+    .stage_dir
+    .as_deref()
+    .or_else(|| Some(std::path::Path::new(crate::DEFAULT_STAGE_DIR)));
   let mut graph = crate::compiler::compile_attractor_graph(
     ast,
     None,
     options.agent_cmd.as_deref(),
-    options.stage_dir.as_deref(),
+    stage_dir,
   )?;
-
   let mut ctx = std::collections::HashMap::new();
   ctx.insert("goal".to_string(), ast.goal.clone());
   ctx.insert("graph.goal".to_string(), ast.goal.clone());

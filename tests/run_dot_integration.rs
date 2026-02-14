@@ -179,3 +179,170 @@ async fn run_dir_writes_checkpoint() {
   );
   assert!(!cp.completed_nodes.is_empty() || !cp.current_node_id.is_empty());
 }
+
+// --- TDD: one-shot sender must be dropped so stream closes and graph completes ---
+//
+// Assumption: When a node sends exactly one item on a port (success or error), it must
+// drop that port's sender after the send. Otherwise the downstream (merge/exit) never
+// sees the stream close, recv() blocks, the node never finishes, and wait_for_completion() hangs.
+//
+// These tests run the graph with a timeout. If the implementation does not drop the used
+// sender, the test times out (FAIL). Passing = graph completes within limit = streams close.
+
+/// Timeout for "graph must complete" tests. Short enough to fail fast when we hang.
+const GRAPH_COMPLETION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3);
+
+/// CodergenNode error path: no agent_cmd → node sends on error port.
+/// Downstream (merge → exit) must see stream close; requires CodergenNode to drop err_tx after send.
+/// CULPRIT when this times out: CodergenNode (src/nodes/codergen_node.rs) does not drop err_tx after send on error path. See history/CULPRIT-one-shot-sender-not-dropped.md.
+#[tokio::test]
+async fn tdd_codergen_error_path_graph_completes_within_timeout() {
+  let dot = r#"
+    digraph TddCodergenError {
+      graph [goal="tdd codergen error path"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      fail [type=exec, command="false"]
+      fix [label="Fix"]
+      start -> fail
+      fail -> fix [condition="outcome=fail"]
+      fix -> exit [condition="outcome=fail"]
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let result = tokio::time::timeout(
+    GRAPH_COMPLETION_TIMEOUT,
+    streamweave_attractor::run_compiled_graph(
+      &ast,
+      streamweave_attractor::RunOptions {
+        run_dir: None,
+        agent_cmd: None,
+        stage_dir: None,
+      },
+    ),
+  )
+  .await;
+  assert!(
+    result.is_ok(),
+    "graph must complete within {:?} (codergen error path). \
+     If this times out, the node that sent on the error port did not drop that sender.",
+    GRAPH_COMPLETION_TIMEOUT
+  );
+  let run_result = result.unwrap().expect("run_compiled_graph");
+  assert!(
+    run_result.completed_nodes.contains(&"fix".to_string()),
+    "fix (CodergenNode) should have run and completed; completed: {:?}",
+    run_result.completed_nodes
+  );
+}
+
+/// CodergenNode success path: agent_cmd that succeeds → node sends on out port.
+/// Downstream must see stream close; requires CodergenNode to drop out_tx after send.
+#[tokio::test]
+async fn tdd_codergen_success_path_graph_completes_within_timeout() {
+  let dot = r#"
+    digraph TddCodergenSuccess {
+      graph [goal="tdd codergen success path"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      fix [label="Fix"]
+      start -> fix
+      fix -> exit
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let result = tokio::time::timeout(
+    GRAPH_COMPLETION_TIMEOUT,
+    streamweave_attractor::run_compiled_graph(
+      &ast,
+      streamweave_attractor::RunOptions {
+        run_dir: None,
+        agent_cmd: Some("true".to_string()),
+        stage_dir: None,
+      },
+    ),
+  )
+  .await;
+  assert!(
+    result.is_ok(),
+    "graph must complete within {:?} (codergen success path). \
+     If this times out, the node that sent on the out port did not drop that sender.",
+    GRAPH_COMPLETION_TIMEOUT
+  );
+  let run_result = result.unwrap().expect("run_compiled_graph");
+  assert!(
+    run_result.completed_nodes.contains(&"fix".to_string()),
+    "fix (CodergenNode) should have run and completed; completed: {:?}",
+    run_result.completed_nodes
+  );
+}
+
+/// ExecNode error path: command fails → node sends on error port.
+/// Same assumption: sender for the used port must be dropped so graph completes.
+#[tokio::test]
+async fn tdd_exec_error_path_graph_completes_within_timeout() {
+  let dot = r#"
+    digraph TddExecError {
+      graph [goal="tdd exec error path"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      fail [type=exec, command="false"]
+      start -> fail
+      fail -> exit [condition="outcome=success"]
+      fail -> exit [condition="outcome=fail"]
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let result = tokio::time::timeout(
+    GRAPH_COMPLETION_TIMEOUT,
+    streamweave_attractor::run_compiled_graph(
+      &ast,
+      streamweave_attractor::RunOptions {
+        run_dir: None,
+        agent_cmd: None,
+        stage_dir: None,
+      },
+    ),
+  )
+  .await;
+  assert!(
+    result.is_ok(),
+    "graph must complete within {:?} (exec error path). \
+     If this times out, ExecNode did not drop the error port sender after send.",
+    GRAPH_COMPLETION_TIMEOUT
+  );
+}
+
+/// ExecNode success path: command succeeds → node sends on out port.
+#[tokio::test]
+async fn tdd_exec_success_path_graph_completes_within_timeout() {
+  let dot = r#"
+    digraph TddExecSuccess {
+      graph [goal="tdd exec success path"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      ok [type=exec, command="true"]
+      start -> ok
+      ok -> exit
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let result = tokio::time::timeout(
+    GRAPH_COMPLETION_TIMEOUT,
+    streamweave_attractor::run_compiled_graph(
+      &ast,
+      streamweave_attractor::RunOptions {
+        run_dir: None,
+        agent_cmd: None,
+        stage_dir: None,
+      },
+    ),
+  )
+  .await;
+  assert!(
+    result.is_ok(),
+    "graph must complete within {:?} (exec success path). \
+     If this times out, ExecNode did not drop the out port sender after send.",
+    GRAPH_COMPLETION_TIMEOUT
+  );
+}

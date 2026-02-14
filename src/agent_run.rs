@@ -13,7 +13,7 @@ pub(crate) fn read_outcome_json(
 ) -> Option<HashMap<String, String>> {
   let base = stage_dir
     .map(std::path::PathBuf::from)
-    .unwrap_or_else(|| std::path::PathBuf::from("."));
+    .unwrap_or_else(|| std::path::PathBuf::from(crate::DEFAULT_STAGE_DIR));
   let path = base.join("outcome.json");
   if !path.exists() {
     return None;
