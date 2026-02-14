@@ -2,8 +2,11 @@
 
 use std::fmt;
 
+use serde::Serialize;
+
 /// Outcome status for a node execution.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum OutcomeStatus {
   Success,
   PartialSuccess,

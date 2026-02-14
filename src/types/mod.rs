@@ -16,6 +16,7 @@ mod attractor_node_test;
 mod checkpoint;
 #[cfg(test)]
 mod checkpoint_test;
+mod execution_log;
 mod execution_state;
 #[cfg(test)]
 mod execution_state_test;
@@ -31,6 +32,7 @@ pub use attractor_edge::AttractorEdge;
 pub use attractor_graph::AttractorGraph;
 pub use attractor_node::AttractorNode;
 pub use checkpoint::Checkpoint;
+pub use execution_log::{ExecutionLog, ExecutionStepEntry};
 pub use execution_state::ExecutionState;
 pub use graph_payload::GraphPayload;
 pub use node_outcome::NodeOutcome;
