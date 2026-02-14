@@ -21,7 +21,7 @@ pub struct AttractorResult {
   pub completed_nodes: Vec<String>,
   /// Final run context after the pipeline completes.
   pub context: HashMap<String, String>,
-  /// True when --resume was used and the checkpoint was already at exit (no work done).
+  /// True when --resume was used and the execution log indicated already at exit (no work done).
   pub already_completed: bool,
 }
 

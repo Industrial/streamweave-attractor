@@ -9,7 +9,7 @@
 //!
 //! Pipeline logic is implemented as StreamWeave nodes (see `nodes` module).
 //! Supporting nodes: ApplyContextUpdatesNode, CheckGoalGatesNode,
-//! CreateCheckpointNode, FindStartNode, etc.
+//! FindStartNode, etc.
 
 /// Default directory for outcome.json and staging when not overridden.
 pub const DEFAULT_STAGE_DIR: &str = ".attractor";

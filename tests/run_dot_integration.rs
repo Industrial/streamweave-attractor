@@ -460,7 +460,7 @@ async fn run_dir_writes_execution_log() {
 
 /// Run pipeline with run_dir and execution log, then resume from that log and assert completion.
 #[tokio::test]
-async fn resume_from_checkpoint_completes() {
+async fn resume_from_execution_log_completes() {
   let dot = r#"
     digraph G {
       graph [goal="resume-test"]
@@ -645,7 +645,7 @@ async fn resume_from_completed_log_returns_already_completed() {
     },
   )
   .await
-  .expect("second run with completed checkpoint");
+  .expect("second run with completed execution log");
 
   assert!(
     result.already_completed,

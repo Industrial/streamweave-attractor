@@ -70,7 +70,7 @@ Supporting pieces used inside or alongside this pipeline:
 
 - **ExecuteHandlerNode**, **SelectEdgeNode**  
   Wrappers around `execute_handler` and `select_edge`; used by the loop (or for composition).
-- **ApplyContextUpdatesNode**, **CheckGoalGatesNode**, **CreateCheckpointNode**, **FindStartNode**  
+- **ApplyContextUpdatesNode**, **CheckGoalGatesNode**, **FindStartNode**  
   Used internally or for finer-grained composition.
 
 Existing building blocks that are **not** wired into the main graph today:

@@ -231,10 +231,10 @@ async fn integration_lib_exec_fail_exit_returns_failure() {
   assert!(format!("{:?}", r.last_outcome.status) != "Success");
 }
 
-/// Proves that running the same graph twice in a row does not skip execution when a checkpoint
-/// exists from the first run. Checkpoint is only used when --resume is explicitly passed.
+/// Proves that running the same graph twice in a row does not skip execution when an
+/// execution log exists from the first run. Resume is only used when --resume is explicitly passed.
 ///
-/// Completed runs do leave a checkpoint when run_dir is set; that is intentional so the next
+/// Completed runs leave an execution log when run_dir and execution_log_path are set; the next
 /// run can use --resume if desired. Without --resume, the graph always runs from start.
 #[tokio::test]
 async fn integration_lib_two_runs_without_resume_both_run_fully() {
@@ -289,6 +289,6 @@ async fn integration_lib_two_runs_without_resume_both_run_fully() {
   assert!(r2.completed_nodes.contains(&"test_coverage".to_string()));
   assert_eq!(
     r1.completed_nodes, r2.completed_nodes,
-    "second run must execute the full graph, not resume from checkpoint"
+    "second run must execute the full graph, not resume from execution log"
   );
 }
