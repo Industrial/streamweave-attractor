@@ -81,7 +81,7 @@ fn integration_exec_fail_exit_dot_fails() {
   // Exec false -> exit on fail path: pipeline reports failure, run_dot exits non-zero
   let path = dot_path("exec_fail_exit.dot");
   let path_str = path.to_str().expect("path");
-  let (stdout, stderr, success) = run_run_dot(&[path_str]);
+  let (stdout, _stderr, success) = run_run_dot(&[path_str]);
   assert!(!success, "exec_fail_exit.dot should fail (exit non-zero)");
   let out = String::from_utf8_lossy(&stdout);
   assert!(out.contains("Pipeline completed"));
