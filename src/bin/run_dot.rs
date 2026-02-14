@@ -6,8 +6,8 @@
 //! Usage: `run_dot [OPTIONS] <path-to-dot-file>`
 //! Example: run_dot examples/workflows/pre-push.dot
 //!
-//! With --run-dir DIR, checkpoint is written to DIR/checkpoint.json on successful exit (when not using --execution-log).
-//! With --resume DIR, run resumes from DIR/execution.log.json when present, else DIR/checkpoint.json (same .dot file).
+//! With --run-dir DIR, execution log is written to DIR/execution.log.json when --execution-log is used.
+//! With --resume DIR, run resumes from DIR/execution.log.json (same .dot file). Execution log is the only persisted run state.
 //!
 //! Set RUST_LOG=streamweave_attractor=trace for TRACE-level span enter/exit and events.
 
@@ -17,7 +17,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process;
 use streamweave_attractor::{
-  DEFAULT_STAGE_DIR, RunOptions, checkpoint_io, dot_parser, execution_log_io, run_compiled_graph,
+  DEFAULT_STAGE_DIR, RunOptions, dot_parser, execution_log_io, run_compiled_graph,
 };
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
@@ -35,9 +35,9 @@ use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
   ATTRACTOR_EXECUTION_LOG  Unset=off. 1 or true=write execution log to <stage_dir>/execution.log.json.
                            Any other value=path to execution log file. Overridden by --execution-log.
 
-Run state (resume prefers execution log):
-  --run-dir DIR   Write checkpoint to DIR/checkpoint.json on success (unless --execution-log is set).
-  --resume DIR    Resume from DIR/execution.log.json if present, else DIR/checkpoint.json (same .dot file).
+Run state (execution log only):
+  --run-dir DIR   Run directory; with --execution-log, log is written to DIR/execution.log.json.
+  --resume DIR    Resume from DIR/execution.log.json (same .dot file).
 
 Examples:
   run_dot examples/workflows/pre-push.dot
@@ -55,11 +55,11 @@ struct Args {
   #[arg(long, value_name = "DIR", default_value = DEFAULT_STAGE_DIR)]
   stage_dir: PathBuf,
 
-  /// Write checkpoint to DIR/checkpoint.json on successful exit. Enables resume with --resume DIR.
+  /// Run directory; with --execution-log, execution log is written to DIR/execution.log.json. Enables resume with --resume DIR.
   #[arg(long = "run-dir", value_name = "DIR")]
   run_dir: Option<PathBuf>,
 
-  /// Resume from checkpoint in DIR (load DIR/checkpoint.json). Use same .dot file as initial run.
+  /// Resume from DIR/execution.log.json. Use same .dot file as initial run.
   #[arg(long = "resume", value_name = "DIR")]
   resume: Option<PathBuf>,
 
@@ -134,20 +134,26 @@ async fn main() {
   let (resume_checkpoint, resume_already_completed) =
     args.resume.as_ref().map_or((None, false), |dir| {
       let log_path = dir.join(execution_log_io::EXECUTION_LOG_FILENAME);
-      if log_path.exists() {
-        if let Ok(log) = execution_log_io::load_execution_log(&log_path) {
-          let exit_id = ast.find_exit().map(|n| n.id.as_str());
-          if let Some(r) = execution_log_io::resume_state_from_log(&log, exit_id) {
-            return (Some(r.checkpoint), r.already_completed);
-          }
-        }
+      if !log_path.exists() {
+        eprintln!(
+          "Error: no execution log at {}. Resume requires {} (execution log is the only run state).",
+          log_path.display(),
+          execution_log_io::EXECUTION_LOG_FILENAME
+        );
+        process::exit(1);
       }
-      // Backward compat: resume from checkpoint.json when no execution log exists.
-      let cp_path = dir.join(checkpoint_io::CHECKPOINT_FILENAME);
-      match checkpoint_io::load_checkpoint(&cp_path) {
-        Ok(cp) => (Some(cp), false),
-        Err(e) => {
-          eprintln!("Error loading checkpoint from {}: {}", cp_path.display(), e);
+      let log = execution_log_io::load_execution_log(&log_path).unwrap_or_else(|e| {
+        eprintln!("Error loading execution log from {}: {}", log_path.display(), e);
+        process::exit(1);
+      });
+      let exit_id = ast.find_exit().map(|n| n.id.as_str());
+      match execution_log_io::resume_state_from_log(&log, exit_id) {
+        Some(r) => (Some(r.checkpoint), r.already_completed),
+        None => {
+          eprintln!(
+            "Error: execution log at {} has no steps and no finished_at; cannot resume.",
+            log_path.display()
+          );
           process::exit(1);
         }
       }
@@ -172,7 +178,7 @@ async fn main() {
 
   info!(status = ?r.last_outcome.status, nodes = ?r.completed_nodes, "pipeline completed");
   if r.already_completed {
-    println!("Pipeline already completed (checkpoint at exit). Nothing to resume.");
+    println!("Pipeline already completed (execution log). Nothing to resume.");
   } else {
     println!("Pipeline completed.");
   }

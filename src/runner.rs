@@ -51,9 +51,9 @@ pub async fn run_streamweave_graph(
 
 /// Options for [run_compiled_graph].
 pub struct RunOptions<'a> {
-  /// If set, checkpoint is written here at successful exit (to `run_dir/checkpoint.json`).
+  /// If set, used to derive execution log path when [execution_log_path] is set (e.g. run_dir/execution.log.json).
   pub run_dir: Option<&'a Path>,
-  /// If set, run resumes from this checkpoint (entry node and initial payload from checkpoint).
+  /// If set, run resumes from this state (entry node and initial payload). Typically from execution log via [crate::execution_log_io::resume_state_from_log].
   pub resume_checkpoint: Option<Checkpoint>,
   /// When true and [resume_checkpoint] is set, skip running and return already_completed (e.g. from execution log with finished_at).
   pub resume_already_completed: bool,
@@ -225,7 +225,7 @@ pub async fn run_compiled_graph(
       )
     });
 
-  // Run state is no longer written to checkpoint.json; use execution_log_path for persistence.
+  // Run state is persisted only via execution_log_path (execution.log.json).
 
   Ok(AttractorResult {
     last_outcome,

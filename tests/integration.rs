@@ -265,10 +265,10 @@ async fn integration_lib_two_runs_without_resume_both_run_fully() {
     log_path.exists(),
     "first run must leave execution log when execution_log_path is set"
   );
-  let checkpoint_file = run_path.join(streamweave_attractor::checkpoint_io::CHECKPOINT_FILENAME);
+  // Execution log is the only persisted run state; no checkpoint.json.
   assert!(
-    !checkpoint_file.exists(),
-    "when execution_log_path is set, checkpoint is not written (log is single source)"
+    !run_path.join("checkpoint.json").exists(),
+    "run state is execution log only; checkpoint.json must not exist"
   );
 
   let r2 = streamweave_attractor::run_compiled_graph(
