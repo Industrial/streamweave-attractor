@@ -22,7 +22,8 @@ fn run_run_dot(args: &[&str]) -> (Vec<u8>, Vec<u8>, bool) {
 
 /// Like run_run_dot but with extra env vars (e.g. ATTRACTOR_EXECUTION_LOG=1 to use sync path).
 fn run_run_dot_with_env(args: &[&str], env: &[(&str, &str)]) -> (Vec<u8>, Vec<u8>, bool) {
-  let mut cmd = Command::new("cargo");
+  let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
+  let mut cmd = Command::new(cargo.as_str());
   cmd
     .args(["run", "--bin", "run_dot", "--"])
     .args(args)
