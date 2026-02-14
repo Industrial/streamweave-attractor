@@ -145,6 +145,7 @@ pub async fn run_compiled_graph(
 
   let (tx_in, rx_in) = tokio::sync::mpsc::channel(1);
   let (_tx_out, mut rx_out) = tokio::sync::mpsc::channel(16);
+  let (_tx_err, mut rx_err) = tokio::sync::mpsc::channel(16);
 
   graph
     .connect_input_channel("input", rx_in)
@@ -152,6 +153,7 @@ pub async fn run_compiled_graph(
   graph
     .connect_output_channel("output", _tx_out)
     .map_err(|e| e.to_string())?;
+  let has_error_port = graph.connect_output_channel("error", _tx_err).is_ok();
 
   tx_in
     .send(Arc::new(initial) as Arc<dyn std::any::Any + Send + Sync>)
@@ -161,13 +163,17 @@ pub async fn run_compiled_graph(
 
   tracing::trace!("run_streamweave_graph: calling graph.execute()");
   graph.execute().await.map_err(|e| e.to_string())?;
-  tracing::trace!("run_streamweave_graph: execute done, waiting for output on rx_out.recv()");
-  let first = rx_out.recv().await;
-  tracing::trace!("run_streamweave_graph: received output, calling wait_for_completion()");
-  graph
-    .wait_for_completion()
-    .await
-    .map_err(|e| e.to_string())?;
+  tracing::trace!("run_streamweave_graph: execute done, waiting for first of output or error");
+  let first = if has_error_port {
+    tokio::select! {
+      Some(arc) = rx_out.recv() => Some(arc),
+      Some(arc) = rx_err.recv() => Some(arc),
+      else => None,
+    }
+  } else {
+    rx_out.recv().await
+  };
+  // Do not wait_for_completion(); first result decides outcome, avoids hang on merge graphs.
 
   let payload = first
     .and_then(|arc| arc.downcast::<GraphPayload>().ok())

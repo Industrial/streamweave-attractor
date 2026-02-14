@@ -5,7 +5,7 @@
 //! Phase 3: Direct port routing: success -> "out", error -> "error" (no router).
 //! Phase 4: Multiple edges to same (node, port) are merged via StreamWeave MergeNode.
 
-use crate::nodes::{CodergenNode, ExecNode, IdentityNode, validate_graph};
+use crate::nodes::{CodergenNode, ExecNode, IdentityNode, OutcomeRouterNode, validate_graph};
 use crate::types::AttractorGraph;
 use std::collections::HashMap;
 use std::path::Path;
@@ -151,9 +151,19 @@ pub fn compile_attractor_graph(
     }
   }
 
+  // Route exit payload by outcome so runner can wait for first of output or error (avoids hang).
+  let exit_router_id = "exit_router";
+  builder = builder
+    .add_node(
+      exit_router_id,
+      Box::new(OutcomeRouterNode::new(exit_router_id)),
+    )
+    .connect(&exit_id, "out", exit_router_id, "in");
+
   let graph = builder
     .input::<std::sync::Arc<dyn std::any::Any + Send + Sync>>("input", &entry_id, "in", None)
-    .output("output", &exit_id, "out")
+    .output("output", exit_router_id, "success")
+    .output("error", exit_router_id, "fail")
     .build()
     .map_err(|e| e.to_string())?;
 
