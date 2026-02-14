@@ -25,6 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
       run_dir: None,
       agent_cmd: None,
       stage_dir: None,
+      execution_log_path: None,
     },
   )
   .await?;

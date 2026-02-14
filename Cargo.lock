@@ -1073,6 +1073,7 @@ version = "0.1.5"
 dependencies = [
  "async-trait",
  "bytes",
+ "chrono",
  "clap",
  "criterion",
  "futures",

@@ -114,6 +114,7 @@ async fn integration_lib_minimal_succeeds() {
       run_dir: None,
       agent_cmd: None,
       stage_dir: None,
+      execution_log_path: None,
     },
   )
   .await
@@ -136,6 +137,7 @@ async fn integration_lib_test_success_only_succeeds() {
       run_dir: None,
       agent_cmd: None,
       stage_dir: None,
+      execution_log_path: None,
     },
   )
   .await
@@ -154,6 +156,7 @@ async fn integration_lib_test_out_error_succeeds() {
       run_dir: None,
       agent_cmd: None,
       stage_dir: None,
+      execution_log_path: None,
     },
   )
   .await
@@ -173,6 +176,7 @@ async fn integration_lib_pre_push_exec_only_succeeds() {
       run_dir: None,
       agent_cmd: None,
       stage_dir: None,
+      execution_log_path: None,
     },
   )
   .await
@@ -192,6 +196,7 @@ async fn integration_lib_exec_fail_exit_returns_failure() {
       run_dir: None,
       agent_cmd: None,
       stage_dir: None,
+      execution_log_path: None,
     },
   )
   .await

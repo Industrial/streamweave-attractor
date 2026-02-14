@@ -62,6 +62,41 @@ fn run_dot_succeeds_with_minimal_start_exit_dot() {
   assert!(stdout.contains("Success") || stdout.contains("completed"));
 }
 
+/// When execution_log_path is set, runner writes execution.log.json on completion (success path).
+#[tokio::test]
+async fn execution_log_path_writes_execution_log_json() {
+  let dir = tempfile::tempdir().expect("temp dir");
+  let log_path = dir.path().join("execution.log.json");
+  let dot = r#"
+    digraph G {
+      graph [goal="exec log test"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      start -> exit
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let _ = streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: None,
+      agent_cmd: None,
+      stage_dir: None,
+      execution_log_path: Some(log_path.clone()),
+    },
+  )
+  .await
+  .expect("run_compiled_graph");
+  let content = std::fs::read_to_string(&log_path).expect("read execution log");
+  let log: serde_json::Value = serde_json::from_str(&content).expect("parse execution log JSON");
+  assert_eq!(log["version"], 1);
+  assert_eq!(log["goal"], "exec log test");
+  assert_eq!(log["final_status"], "success");
+  assert!(log["steps"].as_array().is_some());
+  let steps = log["steps"].as_array().unwrap();
+  assert!(!steps.is_empty(), "expected at least one step");
+}
+
 /// Runs a pre-push-shaped workflow (same topology as pre-push.dot) with quick exec commands
 /// so the test finishes in reasonable time. Verifies run_compiled_graph end-to-end.
 #[tokio::test]
@@ -90,6 +125,7 @@ async fn pre_push_dot_via_run_compiled_graph() {
       run_dir: None,
       agent_cmd: None,
       stage_dir: None,
+      execution_log_path: None,
     },
   )
   .await
@@ -125,6 +161,7 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
       run_dir: None,
       agent_cmd: None,
       stage_dir: None,
+      execution_log_path: None,
     },
   )
   .await
@@ -161,6 +198,7 @@ async fn run_dir_writes_checkpoint() {
       run_dir: Some(run_dir.path()),
       agent_cmd: None,
       stage_dir: None,
+      execution_log_path: None,
     },
   )
   .await
@@ -218,6 +256,7 @@ async fn tdd_codergen_error_path_graph_completes_within_timeout() {
         run_dir: None,
         agent_cmd: None,
         stage_dir: None,
+        execution_log_path: None,
       },
     ),
   )
@@ -259,6 +298,7 @@ async fn tdd_codergen_success_path_graph_completes_within_timeout() {
         run_dir: None,
         agent_cmd: Some("true".to_string()),
         stage_dir: None,
+        execution_log_path: None,
       },
     ),
   )
@@ -301,6 +341,7 @@ async fn tdd_exec_error_path_graph_completes_within_timeout() {
         run_dir: None,
         agent_cmd: None,
         stage_dir: None,
+        execution_log_path: None,
       },
     ),
   )
@@ -335,6 +376,7 @@ async fn tdd_exec_success_path_graph_completes_within_timeout() {
         run_dir: None,
         agent_cmd: None,
         stage_dir: None,
+        execution_log_path: None,
       },
     ),
   )

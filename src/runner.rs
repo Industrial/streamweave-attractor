@@ -4,8 +4,10 @@
 //! - [run_compiled_graph]: compile AST then run, return [crate::nodes::execution_loop::AttractorResult].
 
 use crate::checkpoint_io::{self, CHECKPOINT_FILENAME};
+use crate::nodes::execution_loop::{run_execution_loop_once, RunLoopResult};
 use crate::nodes::execution_loop::AttractorResult;
-use crate::types::{AttractorGraph, Checkpoint, GraphPayload, NodeOutcome};
+use crate::nodes::init_context::create_initial_state;
+use crate::types::{AttractorGraph, Checkpoint, ExecutionLog, GraphPayload, NodeOutcome};
 use std::path::Path;
 use std::sync::Arc;
 use tracing::instrument;
@@ -56,15 +58,80 @@ pub struct RunOptions<'a> {
   pub agent_cmd: Option<String>,
   /// Directory for agent outcome.json and staging.
   pub stage_dir: Option<std::path::PathBuf>,
+  /// If set, execution steps are recorded and written to this path as execution.log.json (on success and failure).
+  pub execution_log_path: Option<std::path::PathBuf>,
+}
+
+/// Writes execution.log.json to the given path (on both success and failure).
+fn write_execution_log(
+  path: &Path,
+  goal: &str,
+  started_at: &str,
+  final_status: &str,
+  completed_nodes: &[String],
+  steps: Vec<crate::types::ExecutionStepEntry>,
+) -> Result<(), String> {
+  let finished_at = chrono::Utc::now().to_rfc3339();
+  let log = ExecutionLog {
+    version: 1,
+    goal: goal.to_string(),
+    started_at: started_at.to_string(),
+    finished_at: Some(finished_at),
+    final_status: final_status.to_string(),
+    completed_nodes: completed_nodes.to_vec(),
+    steps,
+  };
+  let json = serde_json::to_string_pretty(&log).map_err(|e| e.to_string())?;
+  std::fs::write(path, json).map_err(|e| e.to_string())?;
+  Ok(())
 }
 
 /// Compiles the Attractor graph to a StreamWeave graph, runs it, and returns an [AttractorResult].
 /// Uses [crate::compile_attractor_graph]. Initial context includes the graph goal.
+/// When [RunOptions::execution_log_path] is set, runs via the execution loop and writes execution.log.json.
 #[instrument(level = "trace", skip(ast, options))]
 pub async fn run_compiled_graph(
   ast: &AttractorGraph,
   options: RunOptions<'_>,
 ) -> Result<AttractorResult, String> {
+  if let Some(ref log_path) = options.execution_log_path {
+    let started_at = chrono::Utc::now().to_rfc3339();
+    let mut state = create_initial_state(ast.clone(), Some(vec![]));
+    match run_execution_loop_once(&mut state) {
+      RunLoopResult::Ok(result) => {
+        let steps = state.step_log.unwrap_or_default();
+        write_execution_log(
+          log_path,
+          &ast.goal,
+          &started_at,
+          "success",
+          &result.completed_nodes,
+          steps,
+        )?;
+        if let Some(run_dir) = options.run_dir {
+          let cp = Checkpoint {
+            context: result.context.clone(),
+            current_node_id: result
+              .completed_nodes
+              .last()
+              .cloned()
+              .unwrap_or_default(),
+            completed_nodes: result.completed_nodes.clone(),
+          };
+          let path = run_dir.join(CHECKPOINT_FILENAME);
+          checkpoint_io::save_checkpoint(&path, &cp).map_err(|e| e.to_string())?;
+        }
+        return Ok(result);
+      }
+      RunLoopResult::Err(e) => {
+        let steps = state.step_log.unwrap_or_default();
+        let completed = state.completed_nodes.clone();
+        write_execution_log(log_path, &ast.goal, &started_at, "error", &completed, steps)?;
+        return Err(e);
+      }
+    }
+  }
+
   let stage_dir = options
     .stage_dir
     .as_deref()

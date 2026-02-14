@@ -1,6 +1,6 @@
 //! Initialize run context from validated graph.
 
-use crate::types::{AttractorGraph, ExecutionState, RunContext};
+use crate::types::{AttractorGraph, ExecutionState, ExecutionStepEntry, RunContext};
 use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
@@ -26,12 +26,16 @@ pub(crate) fn process_init_context_item(
   item: Arc<dyn Any + Send + Sync>,
 ) -> Option<ExecutionState> {
   let graph = item.downcast::<AttractorGraph>().ok()?;
-  Some(create_initial_state((*graph).clone()))
+  Some(create_initial_state((*graph).clone(), None))
 }
 
 /// Builds ExecutionState from a validated graph.
+/// When `step_log` is `Some`, the execution loop will append step entries to it.
 #[instrument(level = "trace")]
-pub(crate) fn create_initial_state(graph: AttractorGraph) -> ExecutionState {
+pub(crate) fn create_initial_state(
+  graph: AttractorGraph,
+  step_log: Option<Vec<ExecutionStepEntry>>,
+) -> ExecutionState {
   let start_id = graph
     .find_start()
     .map(|n| n.id.clone())
@@ -45,7 +49,7 @@ pub(crate) fn create_initial_state(graph: AttractorGraph) -> ExecutionState {
     current_node_id: start_id,
     completed_nodes: vec![],
     node_outcomes: HashMap::new(),
-    step_log: None,
+    step_log,
   }
 }
 

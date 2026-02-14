@@ -85,7 +85,7 @@ fn new_creates_node() {
 fn create_initial_state_populates_context_and_start() {
   let dot = r#"digraph G { start [shape=Mdiamond] exit [shape=Msquare] start -> exit }"#;
   let graph = crate::dot_parser::parse_dot(dot).unwrap();
-  let state = create_initial_state(graph);
+  let state = create_initial_state(graph, None);
   assert_eq!(state.current_node_id, "start");
   assert!(state.context.contains_key("goal"));
   assert!(state.context.contains_key("graph.goal"));

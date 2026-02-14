@@ -94,6 +94,7 @@ async fn main() {
     run_dir: Some(run_dir.as_path()),
     agent_cmd,
     stage_dir: Some(stage_dir),
+    execution_log_path: None,
   };
 
   let r = match run_compiled_graph(&ast, options).await {
