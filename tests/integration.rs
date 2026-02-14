@@ -123,6 +123,7 @@ async fn integration_lib_minimal_succeeds() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
+      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -146,6 +147,7 @@ async fn integration_lib_test_success_only_succeeds() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
+      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -165,6 +167,7 @@ async fn integration_lib_test_out_error_succeeds() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
+      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -189,6 +192,7 @@ async fn integration_lib_pre_push_exec_only_succeeds() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
+        resume_checkpoint: None,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: Some(log_path),
@@ -211,6 +215,7 @@ async fn integration_lib_exec_fail_exit_returns_failure() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
+      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,

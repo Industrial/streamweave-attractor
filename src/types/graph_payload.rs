@@ -49,6 +49,16 @@ impl GraphPayload {
     }
   }
 
+  /// Initial payload for resume: context, current node, and completed nodes from a checkpoint.
+  pub fn from_checkpoint(cp: &super::Checkpoint) -> Self {
+    Self {
+      context: cp.context.clone(),
+      outcome: None,
+      current_node_id: cp.current_node_id.clone(),
+      completed_nodes: cp.completed_nodes.clone(),
+    }
+  }
+
   /// Returns a new payload with this node recorded as current and completed (for nodes that emit).
   #[instrument(level = "trace", skip(self, node_id))]
   pub fn with_node_completed(&self, node_id: impl Into<String>) -> Self {

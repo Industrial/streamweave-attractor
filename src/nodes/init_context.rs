@@ -1,6 +1,6 @@
 //! Initialize run context from validated graph.
 
-use crate::types::{AttractorGraph, ExecutionState, ExecutionStepEntry, RunContext};
+use crate::types::{AttractorGraph, Checkpoint, ExecutionState, ExecutionStepEntry, RunContext};
 use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
@@ -48,6 +48,23 @@ pub(crate) fn create_initial_state(
     context,
     current_node_id: start_id,
     completed_nodes: vec![],
+    node_outcomes: HashMap::new(),
+    step_log,
+  }
+}
+
+/// Builds ExecutionState from a checkpoint for resume (context, current node, completed nodes).
+#[instrument(level = "trace", skip(cp))]
+pub(crate) fn create_initial_state_from_checkpoint(
+  graph: AttractorGraph,
+  cp: &Checkpoint,
+  step_log: Option<Vec<ExecutionStepEntry>>,
+) -> ExecutionState {
+  ExecutionState {
+    graph,
+    context: cp.context.clone(),
+    current_node_id: cp.current_node_id.clone(),
+    completed_nodes: cp.completed_nodes.clone(),
     node_outcomes: HashMap::new(),
     step_log,
   }

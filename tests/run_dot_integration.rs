@@ -301,6 +301,7 @@ async fn execution_log_path_writes_execution_log_json() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
+      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: Some(log_path.clone()),
@@ -344,6 +345,7 @@ async fn pre_push_dot_via_run_compiled_graph() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
+      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -380,6 +382,7 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: None,
+      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -417,6 +420,7 @@ async fn run_dir_writes_checkpoint() {
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
+      resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
       execution_log_path: None,
@@ -437,6 +441,59 @@ async fn run_dir_writes_checkpoint() {
     Some("resume-test")
   );
   assert!(!cp.completed_nodes.is_empty() || !cp.current_node_id.is_empty());
+}
+
+/// Run pipeline with run_dir, then resume from that checkpoint and assert completion.
+#[tokio::test]
+async fn resume_from_checkpoint_completes() {
+  let dot = r#"
+    digraph G {
+      graph [goal="resume-test"]
+      start [shape=Mdiamond]
+      exit [shape=Msquare]
+      start -> exit
+    }
+  "#;
+  let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
+  let run_dir = tempfile::tempdir().expect("temp dir");
+
+  // First run: write checkpoint
+  streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: Some(run_dir.path()),
+      resume_checkpoint: None,
+      agent_cmd: None,
+      stage_dir: None,
+      execution_log_path: None,
+    },
+  )
+  .await
+  .expect("first run");
+
+  let cp_path = run_dir.path().join("checkpoint.json");
+  let cp =
+    streamweave_attractor::checkpoint_io::load_checkpoint(&cp_path).expect("load checkpoint");
+
+  // Resume run: same graph, from checkpoint
+  let result = streamweave_attractor::run_compiled_graph(
+    &ast,
+    streamweave_attractor::RunOptions {
+      run_dir: Some(run_dir.path()),
+      resume_checkpoint: Some(cp),
+      agent_cmd: None,
+      stage_dir: None,
+      execution_log_path: None,
+    },
+  )
+  .await
+  .expect("resume run");
+
+  assert!(
+    result.completed_nodes.contains(&"exit".to_string()),
+    "resume should complete through exit; completed: {:?}",
+    result.completed_nodes
+  );
 }
 
 // --- TDD: one-shot sender must be dropped so stream closes and graph completes ---
@@ -475,6 +532,7 @@ async fn tdd_codergen_error_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
+        resume_checkpoint: None,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: None,
@@ -517,6 +575,7 @@ async fn tdd_codergen_success_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
+        resume_checkpoint: None,
         agent_cmd: Some("true".to_string()),
         stage_dir: None,
         execution_log_path: None,
@@ -560,6 +619,7 @@ async fn tdd_exec_error_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
+        resume_checkpoint: None,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: None,
@@ -602,6 +662,7 @@ async fn tdd_cyclic_exec_error_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
+        resume_checkpoint: None,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: None,
@@ -637,6 +698,7 @@ async fn tdd_exec_success_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
+        resume_checkpoint: None,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: None,
@@ -678,6 +740,7 @@ async fn tdd_cyclic_codergen_error_path_graph_completes_within_timeout() {
       &ast,
       streamweave_attractor::RunOptions {
         run_dir: None,
+        resume_checkpoint: None,
         agent_cmd: None,
         stage_dir: None,
         execution_log_path: None,

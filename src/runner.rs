@@ -6,7 +6,7 @@
 use crate::checkpoint_io::{self, CHECKPOINT_FILENAME};
 use crate::nodes::execution_loop::AttractorResult;
 use crate::nodes::execution_loop::{RunLoopResult, run_execution_loop_once};
-use crate::nodes::init_context::create_initial_state;
+use crate::nodes::init_context::{create_initial_state, create_initial_state_from_checkpoint};
 use crate::types::{AttractorGraph, Checkpoint, ExecutionLog, GraphPayload, NodeOutcome};
 use std::path::Path;
 use std::sync::Arc;
@@ -54,6 +54,8 @@ pub async fn run_streamweave_graph(
 pub struct RunOptions<'a> {
   /// If set, checkpoint is written here at successful exit (to `run_dir/checkpoint.json`).
   pub run_dir: Option<&'a Path>,
+  /// If set, run resumes from this checkpoint (entry node and initial payload from checkpoint).
+  pub resume_checkpoint: Option<Checkpoint>,
   /// Command for agent/codergen nodes (e.g. cursor-agent). Required if the graph has codergen nodes.
   pub agent_cmd: Option<String>,
   /// Directory for agent outcome.json and staging.
@@ -96,7 +98,10 @@ pub async fn run_compiled_graph(
 ) -> Result<AttractorResult, String> {
   if let Some(ref log_path) = options.execution_log_path {
     let started_at = chrono::Utc::now().to_rfc3339();
-    let mut state = create_initial_state(ast.clone(), Some(vec![]));
+    let mut state = match &options.resume_checkpoint {
+      Some(cp) => create_initial_state_from_checkpoint(ast.clone(), cp, Some(vec![])),
+      None => create_initial_state(ast.clone(), Some(vec![])),
+    };
     match run_execution_loop_once(&mut state) {
       RunLoopResult::Ok(result) => {
         let steps = state.step_log.unwrap_or_default();
@@ -132,16 +137,29 @@ pub async fn run_compiled_graph(
     .stage_dir
     .as_deref()
     .or_else(|| Some(std::path::Path::new(crate::DEFAULT_STAGE_DIR)));
-  let mut graph =
-    crate::compiler::compile_attractor_graph(ast, None, options.agent_cmd.as_deref(), stage_dir)?;
-  let mut ctx = std::collections::HashMap::new();
-  ctx.insert("goal".to_string(), ast.goal.clone());
-  ctx.insert("graph.goal".to_string(), ast.goal.clone());
-  let start_id = ast
-    .find_start()
-    .map(|n| n.id.clone())
-    .ok_or("missing start node")?;
-  let initial = GraphPayload::initial(ctx, start_id);
+  let entry_node_id = options
+    .resume_checkpoint
+    .as_ref()
+    .map(|cp| cp.current_node_id.as_str());
+  let mut graph = crate::compiler::compile_attractor_graph(
+    ast,
+    entry_node_id,
+    options.agent_cmd.as_deref(),
+    stage_dir,
+  )?;
+  let initial = match &options.resume_checkpoint {
+    Some(cp) => GraphPayload::from_checkpoint(cp),
+    None => {
+      let mut ctx = std::collections::HashMap::new();
+      ctx.insert("goal".to_string(), ast.goal.clone());
+      ctx.insert("graph.goal".to_string(), ast.goal.clone());
+      let start_id = ast
+        .find_start()
+        .map(|n| n.id.clone())
+        .ok_or("missing start node")?;
+      GraphPayload::initial(ctx, start_id)
+    }
+  };
 
   let (tx_in, rx_in) = tokio::sync::mpsc::channel(1);
   let (_tx_out, mut rx_out) = tokio::sync::mpsc::channel(16);

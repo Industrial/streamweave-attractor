@@ -21,6 +21,8 @@ mod execution_state;
 #[cfg(test)]
 mod execution_state_test;
 mod graph_payload;
+#[cfg(test)]
+mod graph_payload_test;
 mod node_outcome;
 #[cfg(test)]
 mod node_outcome_test;

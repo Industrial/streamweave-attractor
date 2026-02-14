@@ -8,8 +8,9 @@ use streamweave::node::Node;
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::InitContextNode;
-use super::init_context::create_initial_state;
-use super::init_context::process_init_context_item;
+use super::init_context::{
+  create_initial_state, create_initial_state_from_checkpoint, process_init_context_item,
+};
 
 #[tokio::test]
 async fn node_execute_skips_wrong_type() {
@@ -107,4 +108,21 @@ fn process_init_context_item_returns_none_for_wrong_type() {
   let item = Arc::new("not a graph".to_string()) as Arc<dyn std::any::Any + Send + Sync>;
   let state = process_init_context_item(item);
   assert!(state.is_none());
+}
+
+#[test]
+fn create_initial_state_from_checkpoint_restores_context_and_node() {
+  let dot = r#"digraph G { start [shape=Mdiamond] exit [shape=Msquare] start -> exit }"#;
+  let graph = crate::dot_parser::parse_dot(dot).unwrap();
+  let mut ctx = HashMap::new();
+  ctx.insert("resumed".to_string(), "1".to_string());
+  let cp = crate::types::Checkpoint {
+    context: ctx,
+    current_node_id: "exit".to_string(),
+    completed_nodes: vec!["start".to_string(), "exit".to_string()],
+  };
+  let state = create_initial_state_from_checkpoint(graph, &cp, None);
+  assert_eq!(state.current_node_id, "exit");
+  assert_eq!(state.context.get("resumed").map(String::as_str), Some("1"));
+  assert_eq!(state.completed_nodes, &["start", "exit"]);
 }
