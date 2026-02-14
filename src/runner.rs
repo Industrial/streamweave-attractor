@@ -3,7 +3,6 @@
 //! - [run_streamweave_graph]: run a compiled graph (one trigger in, first output out).
 //! - [run_compiled_graph]: compile AST then run, return [crate::nodes::execution_loop::AttractorResult].
 
-use crate::checkpoint_io::{self, CHECKPOINT_FILENAME};
 use crate::nodes::execution_loop::AttractorResult;
 use crate::nodes::execution_loop::{RunLoopResult, run_execution_loop_once};
 use crate::nodes::init_context::{create_initial_state, create_initial_state_from_checkpoint};
@@ -202,7 +201,7 @@ pub async fn run_compiled_graph(
   let payload = first
     .and_then(|arc| arc.downcast::<GraphPayload>().ok())
     .map(|p| (*p).clone());
-  let (context, last_outcome, completed_nodes, current_node_id) = payload
+  let (context, last_outcome, completed_nodes, _current_node_id) = payload
     .as_ref()
     .map(|p| {
       (
@@ -223,15 +222,7 @@ pub async fn run_compiled_graph(
       )
     });
 
-  if let Some(run_dir) = options.run_dir {
-    let cp = Checkpoint {
-      context: context.clone(),
-      current_node_id: current_node_id.clone(),
-      completed_nodes: completed_nodes.clone(),
-    };
-    let path = run_dir.join(CHECKPOINT_FILENAME);
-    checkpoint_io::save_checkpoint(&path, &cp).map_err(|e| e.to_string())?;
-  }
+  // Run state is no longer written to checkpoint.json; use execution_log_path for persistence.
 
   Ok(AttractorResult {
     last_outcome,

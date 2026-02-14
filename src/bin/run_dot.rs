@@ -141,6 +141,7 @@ async fn main() {
         }
       }
     }
+    // Backward compat: resume from checkpoint.json when no execution log exists.
     let cp_path = dir.join(checkpoint_io::CHECKPOINT_FILENAME);
     match checkpoint_io::load_checkpoint(&cp_path) {
       Ok(cp) => Some(cp),

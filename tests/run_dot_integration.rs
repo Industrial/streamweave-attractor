@@ -402,7 +402,7 @@ async fn test_out_error_dot_error_path_then_fix_to_exit() {
   );
 }
 
-/// Run pipeline with run_dir and verify checkpoint is written.
+/// Run pipeline with run_dir and execution_log_path and verify execution log is written.
 #[tokio::test]
 async fn run_dir_writes_checkpoint() {
   let dot = r#"
@@ -415,6 +415,7 @@ async fn run_dir_writes_checkpoint() {
   "#;
   let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
   let run_dir = tempfile::tempdir().expect("temp dir");
+  let log_path = run_dir.path().join("execution.log.json");
 
   streamweave_attractor::run_compiled_graph(
     &ast,
@@ -423,27 +424,23 @@ async fn run_dir_writes_checkpoint() {
       resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
-      execution_log_path: None,
+      execution_log_path: Some(log_path.clone()),
     },
   )
   .await
   .expect("run_compiled_graph");
 
-  let cp_path = run_dir.path().join("checkpoint.json");
   assert!(
-    cp_path.exists(),
-    "checkpoint.json should exist after run with run_dir"
+    log_path.exists(),
+    "execution.log.json should exist after run with run_dir and execution_log_path"
   );
-  let cp =
-    streamweave_attractor::checkpoint_io::load_checkpoint(&cp_path).expect("load checkpoint");
-  assert_eq!(
-    cp.context.get("goal").map(String::as_str),
-    Some("resume-test")
-  );
-  assert!(!cp.completed_nodes.is_empty() || !cp.current_node_id.is_empty());
+  let log =
+    streamweave_attractor::execution_log_io::load_execution_log(&log_path).expect("load log");
+  assert_eq!(log.goal, "resume-test");
+  assert!(!log.completed_nodes.is_empty() || !log.steps.is_empty());
 }
 
-/// Run pipeline with run_dir, then resume from that checkpoint and assert completion.
+/// Run pipeline with run_dir and execution log, then resume from that log and assert completion.
 #[tokio::test]
 async fn resume_from_checkpoint_completes() {
   let dot = r#"
@@ -456,8 +453,9 @@ async fn resume_from_checkpoint_completes() {
   "#;
   let ast = streamweave_attractor::dot_parser::parse_dot(dot).expect("parse dot");
   let run_dir = tempfile::tempdir().expect("temp dir");
+  let log_path = run_dir.path().join("execution.log.json");
 
-  // First run: write checkpoint
+  // First run: write execution log
   streamweave_attractor::run_compiled_graph(
     &ast,
     streamweave_attractor::RunOptions {
@@ -465,25 +463,27 @@ async fn resume_from_checkpoint_completes() {
       resume_checkpoint: None,
       agent_cmd: None,
       stage_dir: None,
-      execution_log_path: None,
+      execution_log_path: Some(log_path.clone()),
     },
   )
   .await
   .expect("first run");
 
-  let cp_path = run_dir.path().join("checkpoint.json");
-  let cp =
-    streamweave_attractor::checkpoint_io::load_checkpoint(&cp_path).expect("load checkpoint");
+  let log =
+    streamweave_attractor::execution_log_io::load_execution_log(&log_path).expect("load log");
+  let exit_id = ast.find_exit().map(|n| n.id.as_str());
+  let resume = streamweave_attractor::execution_log_io::resume_state_from_log(&log, exit_id)
+    .expect("resume state from log");
 
-  // Resume run: same graph, from checkpoint
+  // Resume run: same graph, from execution log
   let result = streamweave_attractor::run_compiled_graph(
     &ast,
     streamweave_attractor::RunOptions {
       run_dir: Some(run_dir.path()),
-      resume_checkpoint: Some(cp),
+      resume_checkpoint: Some(resume.checkpoint),
       agent_cmd: None,
       stage_dir: None,
-      execution_log_path: None,
+      execution_log_path: Some(log_path),
     },
   )
   .await
