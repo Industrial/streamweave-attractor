@@ -80,6 +80,8 @@ impl Node for CodergenNode {
       let in_stream = inputs.remove("in").ok_or("Missing 'in' input")?;
       let (out_tx, out_rx) = mpsc::channel(16);
       let (err_tx, err_rx) = mpsc::channel(16);
+      // Must use while let (not if let): cyclic graphs (e.g. beads-worker-loop) feed multiple
+      // items. A previous fix for clippy::never_loop incorrectly changed this to if let, breaking loops.
       tokio::spawn(async move {
         let mut s = in_stream;
         while let Some(item) = s.next().await {
@@ -122,8 +124,8 @@ impl Node for CodergenNode {
           completed.push(name.clone());
           let payload = GraphPayload::new(updated, Some(outcome), name.clone(), completed);
           let arc = Arc::new(payload) as Arc<dyn Any + Send + Sync>;
-          // Process all items (while let); cyclic graphs (e.g. beads-worker-loop) feed multiple's stream ends,
-          // and used so the downstream sees stream close and wait_for_completion() can finish.
+          // Process all items (while let); cyclic graphs (e.g. beads-worker-loop) feed multiple items.
+          // Drop both senders after loop to close output streams.
           
           if is_success {
             tracing::trace!(node = %name, "CodergenNode sending to out port");
