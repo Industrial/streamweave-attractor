@@ -69,7 +69,7 @@ impl Node for ExecNode {
       let (err_tx, err_rx) = mpsc::channel(16);
       tokio::spawn(async move {
         let mut s = in_stream;
-        if let Some(item) = s.next().await {
+        while let Some(item) = s.next().await {
           tracing::trace!(node = %name, "ExecNode received item, processing");
           tracing::info!(node = %name, command = %cmd, "running");
           let incoming = item.downcast::<GraphPayload>().ok();
@@ -106,23 +106,21 @@ impl Node for ExecNode {
           completed.push(name.clone());
           let payload = GraphPayload::new(updated, Some(outcome), name.clone(), completed);
           let arc = Arc::new(payload) as Arc<dyn Any + Send + Sync>;
-          // Drop both senders after sending on one: unused so that branch's stream ends,
+          // Process all items (while let); cyclic graphs (e.g. beads-worker-loop) feed multiple's stream ends,
           // and used so the downstream sees stream close and wait_for_completion() can finish.
           
           if is_success {
             tracing::trace!(node = %name, "ExecNode sending to out port");
             tracing::info!(node = %name, "finished: success");
             let _ = out_tx.send(arc).await;
-            drop(err_tx);
-            drop(out_tx);
           } else {
             tracing::trace!(node = %name, "ExecNode sending to error port");
             tracing::info!(node = %name, "finished: error");
             let _ = err_tx.send(arc).await;
-            drop(out_tx);
-            drop(err_tx);
           }
         }
+        drop(out_tx);
+        drop(err_tx);
       });
       let mut outputs = HashMap::new();
       outputs.insert(
